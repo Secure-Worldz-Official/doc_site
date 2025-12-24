@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Engineering - Phase 6: Dynamic Analysis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Reset - Clean */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .page-title h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff5f56, #ffbd2e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .page-title p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Main Theme Container */
+        .reverse-theme {
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 95, 86, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .theme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 95, 86, 0.3);
+            flex-wrap: wrap;
+        }
+        
+        .theme-header h2 {
+            font-size: 1.8rem;
+            color: #ff5f56;
+        }
+        
+        .phase-tag {
+            background: rgba(255, 95, 86, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #ff5f56;
+        }
+        
+        /* Navigation */
+        .phase-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-nav a {
+            color: #ff5f56;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-nav a.active {
+            background: rgba(255, 95, 86, 0.2);
+            border: 1px solid #ff5f56;
+        }
+        
+        .phase-nav a:hover:not(.active) {
+            background: rgba(255, 95, 86, 0.1);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #ff5f56;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-section:hover {
+            transform: translateX(5px);
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #ff5f56;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: rgba(255, 95, 86, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 95, 86, 0.2);
+        }
+        
+        /* Quote Box */
+        .quote-box {
+            background: rgba(255, 189, 46, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ffbd2e;
+            font-style: italic;
+        }
+        
+        /* Lists */
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .concept-item {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        /* Tool Cards */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .tool-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 189, 46, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-5px);
+            border-color: #ffbd2e;
+        }
+        
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .tool-icon {
+            font-size: 2rem;
+            color: #ffbd2e;
+        }
+        
+        .tool-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #ffbd2e;
+        }
+        
+        /* Code Container */
+        .code-container {
+            background: #0a0a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 189, 46, 0.3);
+            margin: 20px 0;
+        }
+        
+        .code-header {
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 189, 46, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #ffbd2e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .code-lang {
+            background: rgba(255, 189, 46, 0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .code-box {
+            padding: 20px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            margin-bottom: 4px;
+            display: block;
+            white-space: pre;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .line-number {
+            color: #666;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        .code-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-keyword {
+            color: #ff5f56;
+            font-weight: 600;
+        }
+        
+        .code-string {
+            color: #ffbd2e;
+        }
+        
+        .code-function {
+            color: #00eeff;
+        }
+        
+        .code-cmd {
+            color: #27ca3f;
+        }
+        
+        .code-register {
+            color: #9d50bb;
+        }
+        
+        /* Platform Table */
+        .platform-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+        
+        .platform-table th {
+            background: rgba(255, 189, 46, 0.1);
+            padding: 12px;
+            text-align: left;
+            color: #ffbd2e;
+            border: 1px solid rgba(255, 189, 46, 0.3);
+        }
+        
+        .platform-table td {
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Workflow Steps */
+        .workflow {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border: 1px solid rgba(0, 238, 255, 0.2);
+        }
+        
+        .workflow-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 3px solid #00eeff;
+            background: rgba(0, 238, 255, 0.05);
+        }
+        
+        .step-number {
+            color: #00eeff;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        /* Debug Commands */
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .command-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(157, 80, 187, 0.2);
+        }
+        
+        .command-name {
+            color: #9d50bb;
+            font-family: 'Monaco', 'Consolas', monospace;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        /* Memory Layout */
+        .memory-layout {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border: 1px solid rgba(39, 202, 63, 0.2);
+        }
+        
+        .memory-section {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .memory-title {
+            color: #27ca3f;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        /* Button Group */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 95, 86, 0.2);
+            color: white;
+            border: 1px solid #ff5f56;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 95, 86, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn.next {
+            background: linear-gradient(90deg, #ff5f56, #ffbd2e);
+            border: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .page-title h1 {
+                font-size: 2.2rem;
+            }
+            
+            .reverse-theme {
+                padding: 20px;
+            }
+            
+            .theme-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .theme-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 1.2rem;
+            }
+            
+            .tool-grid, .commands-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .reverse-theme {
+                padding: 15px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .code-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .tool-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-title">
+            <h1>Reverse Engineering</h1>
+            <p>Phase 6: Dynamic Analysis – Watching Software Breathe 😄</p>
+        </div>
+        
+        <div class="phase-nav">
+            <a href="#">Phase 1: Foundation</a>
+            <a href="#">Phase 2: Binary Basics</a>
+            <a href="#">Phase 3: Static Analysis</a>
+            <a href="#">Phase 4: Decompilation</a>
+            <a href="#">Phase 5: Language-Specific</a>
+            <a href="#" class="active">Phase 6: Dynamic Analysis</a>
+        </div>
+        
+        <div class="reverse-theme">
+            <div class="theme-header">
+                <h2><i class="fas fa-running"></i> Shadowing Software in Motion</h2>
+                <div class="phase-tag">PHASE 6: DYNAMIC ANALYSIS</div>
+            </div>
+            
+            <div class="article-content">
+                <!-- Introduction -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-play"></i> The Most Interactive Part</h3>
+                    <div class="section-content">
+                        <p>Welcome to the most interactive part of reverse engineering! Static analysis taught you how to read programs silently, and decompilation helped you reconstruct logic. Now it's time to watch software in motion and understand its behavior in real-time.</p>
+                        
+                        <div class="quote-box">
+                            Dynamic analysis is like shadowing a person instead of reading their diary. You see exactly what happens when the program runs.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Why Dynamic Analysis Matters -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-lightbulb"></i> Why Dynamic Analysis Matters</h3>
+                    <div class="section-content">
+                        <p>Programs aren't just static bytes; they:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Allocate memory</li>
+                            <li class="concept-item">Call APIs</li>
+                            <li class="concept-item">Communicate over networks</li>
+                            <li class="concept-item">Perform conditional actions</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            Static analysis gives hints, but running the program reveals reality.
+                        </div>
+                        
+                        <p><strong>Benefits of dynamic analysis:</strong></p>
+                        
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-eye"></i></div>
+                                    <div class="tool-name">Observe Runtime</div>
+                                </div>
+                                <p>See actual execution flow in real-time</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-search"></i></div>
+                                    <div class="tool-name">Detect Hidden Logic</div>
+                                </div>
+                                <p>Find code not visible in static analysis</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-lock"></i></div>
+                                    <div class="tool-name">Understand Security</div>
+                                </div>
+                                <p>Watch encryption, password checks, and loops</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-shield-alt"></i></div>
+                                    <div class="tool-name">Safe Malware Analysis</div>
+                                </div>
+                                <p>Debug malware safely in sandbox environments</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tools of the Trade -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-tools"></i> Tools of the Trade 🛠️</h3>
+                    <div class="section-content">
+                        <p>Dynamic analysis requires specialized tools depending on the platform:</p>
+                        
+                        <table class="platform-table">
+                            <tr>
+                                <th>Platform</th>
+                                <th>Tools</th>
+                                <th>Purpose</th>
+                            </tr>
+                            <tr>
+                                <td>Linux / Windows</td>
+                                <td>gdb, lldb, x64dbg, WinDbg</td>
+                                <td>Native debugging, breakpoints, memory inspection</td>
+                            </tr>
+                            <tr>
+                                <td>Android</td>
+                                <td>Frida, Android Studio Debugger, JDWP</td>
+                                <td>Mobile app debugging, method hooking</td>
+                            </tr>
+                            <tr>
+                                <td>Cross-platform</td>
+                                <td>strace, ltrace, Valgrind</td>
+                                <td>System call tracing, memory debugging</td>
+                            </tr>
+                            <tr>
+                                <td>Malware Analysis</td>
+                                <td>Cuckoo Sandbox, Process Monitor, OllyDbg</td>
+                                <td>Safe execution, behavior monitoring</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Debuggers Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-user-friends"></i> Debuggers: Your Best Friends</h3>
+                    <div class="section-content">
+                        <p>A debugger lets you pause, step through, and inspect program execution.</p>
+                        
+                        <p><strong>Example: gdb with a C Program</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> C Program
+                                </div>
+                                <div class="code-lang">C</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-comment">#include &lt;stdio.h&gt;</span></div>
+                                <div class="code-line"></div>
+                                <div class="code-line"><span class="code-keyword">int</span> <span class="code-function">main</span>() {</div>
+                                <div class="code-line">    <span class="code-keyword">int</span> secret = 42;</div>
+                                <div class="code-line">    <span class="code-keyword">int</span> input;</div>
+                                <div class="code-line">    printf(<span class="code-string">"Guess the number: "</span>);</div>
+                                <div class="code-line">    scanf(<span class="code-string">"%d"</span>, &input);</div>
+                                <div class="code-line">    <span class="code-keyword">if</span>(input == secret) {</div>
+                                <div class="code-line">        printf(<span class="code-string">"Correct!\n"</span>);</div>
+                                <div class="code-line">    } <span class="code-keyword">else</span> {</div>
+                                <div class="code-line">        printf(<span class="code-string">"Try again.\n"</span>);</div>
+                                <div class="code-line">    }</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> 0;</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Run under gdb:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-cmd">gdb</span> ./guess</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Common debugger commands:</strong></p>
+                        
+                        <div class="commands-grid">
+                            <div class="command-card">
+                                <div class="command-name">break main</div>
+                                <p>Set breakpoint at main function</p>
+                            </div>
+                            <div class="command-card">
+                                <div class="command-name">run</div>
+                                <p>Start program execution</p>
+                            </div>
+                            <div class="command-card">
+                                <div class="command-name">next</div>
+                                <p>Step line by line (step over functions)</p>
+                            </div>
+                            <div class="command-card">
+                                <div class="command-name">print secret</div>
+                                <p>Inspect variable value</p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            You can now see the value of secret in memory without changing code.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Breakpoints and Stepping -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-pause-circle"></i> Breakpoints and Stepping</h3>
+                    <div class="section-content">
+                        <p>Breakpoints let you stop execution at a specific point.</p>
+                        
+                        <p><strong>Types of breakpoints:</strong></p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item"><strong>Conditional breakpoints:</strong> stop only if a condition is met</li>
+                            <li class="concept-item"><strong>Memory breakpoints:</strong> stop when a memory location is accessed</li>
+                            <li class="concept-item"><strong>Function breakpoints:</strong> stop at function entry/exit</li>
+                        </ul>
+                        
+                        <p><strong>Step commands:</strong></p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">step</span> → step into function (enter the function)
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">next</span> → step over function (execute function as one step)
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">continue</span> → resume execution until next breakpoint
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Inspecting Memory -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-memory"></i> Inspecting Memory</h3>
+                    <div class="section-content">
+                        <p>Dynamic analysis lets you inspect:</p>
+                        
+                        <div class="memory-layout">
+                            <div class="memory-section">
+                                <div class="memory-title">Stack</div>
+                                <div>Local variables and return addresses</div>
+                            </div>
+                            <div class="memory-section">
+                                <div class="memory-title">Heap</div>
+                                <div>Dynamically allocated memory</div>
+                            </div>
+                            <div class="memory-section">
+                                <div class="memory-title">Registers</div>
+                                <div>CPU state and temporary values</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Example: x64 assembly snippet</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-microchip"></i> Assembly Code
+                                </div>
+                                <div class="code-lang">x64</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">mov <span class="code-register">eax</span>, [<span class="code-register">rbp</span>-4]   <span class="code-comment">; load variable from stack</span></div>
+                                <div class="code-line">cmp <span class="code-register">eax</span>, 1337      <span class="code-comment">; compare with constant</span></div>
+                                <div class="code-line">je success</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            In debugger:<br>
+                            • eax value can be monitored live<br>
+                            • You can change it to bypass checks for testing logic
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modifying Values at Runtime -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-edit"></i> Modifying Values at Runtime</h3>
+                    <div class="section-content">
+                        <p>Dynamic analysis isn't just observing—it's interacting with memory.</p>
+                        
+                        <p><strong>Example in gdb:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Debugger Command
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">set var input=42</div>
+                                <div class="code-line">continue</div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Even if the program expected a wrong guess, you force it to take the correct path. This teaches fragility of control flow without touching binary permanently.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Watching API Calls -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-satellite-dish"></i> Watching API Calls</h3>
+                    <div class="section-content">
+                        <p>Programs often call OS or library functions dynamically.</p>
+                        
+                        <div class="commands-grid">
+                            <div class="command-card">
+                                <div class="command-name">strace</div>
+                                <p>Linux system call tracer</p>
+                            </div>
+                            <div class="command-card">
+                                <div class="command-name">ltrace</div>
+                                <p>Linux library call tracer</p>
+                            </div>
+                            <div class="command-card">
+                                <div class="command-name">API Monitor</div>
+                                <p>Windows API monitoring</p>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Example: monitor file access</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> System Call Tracing
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-cmd">strace</span> ./program</div>
+                            </div>
+                        </div>
+                        
+                        <p>You can see:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Files opened</li>
+                            <li class="concept-item">Network connections</li>
+                            <li class="concept-item">System calls made</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            This is critical for understanding hidden runtime behavior.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Android Dynamic Analysis -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fab fa-android"></i> Android Dynamic Analysis</h3>
+                    <div class="section-content">
+                        <p>Android apps can be dynamically analyzed using:</p>
+                        
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-code"></i></div>
+                                    <div class="tool-name">Frida</div>
+                                </div>
+                                <p>Inject scripts into running apps</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-bug"></i></div>
+                                    <div class="tool-name">JDWP Debugging</div>
+                                </div>
+                                <p>Attach debugger to Java processes</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-file-alt"></i></div>
+                                    <div class="tool-name">logcat</div>
+                                </div>
+                                <p>Read runtime logs from Android system</p>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Example Frida script:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fab fa-js"></i> Frida JavaScript
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">Java.perform(function() {</div>
+                                <div class="code-line">    var MainActivity = Java.use(<span class="code-string">"com.app.MainActivity"</span>);</div>
+                                <div class="code-line">    MainActivity.checkPassword.implementation = function(pwd) {</div>
+                                <div class="code-line">        console.log(<span class="code-string">"Password called: "</span> + pwd);</div>
+                                <div class="code-line">        return true;  <span class="code-comment">// bypass check</span></div>
+                                <div class="code-line">    };</div>
+                                <div class="code-line">});</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            You can now intercept and modify logic in real-time.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dynamic Analysis Workflow -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-road"></i> Dynamic Analysis Workflow</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> Identify functions of interest from static analysis
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> Set breakpoints or hooks
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> Observe variable values, memory, registers
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">4.</span> Step through execution
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">5.</span> Modify values for testing behavior
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">6.</span> Record patterns for later patching or understanding
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Runtime Behavior Patterns -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-project-diagram"></i> Runtime Behavior Patterns</h3>
+                    <div class="section-content">
+                        <p>Common patterns to watch for during dynamic analysis:</p>
+                        
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-key"></i></div>
+                                    <div class="tool-name">Password Checks</div>
+                                </div>
+                                <p>Compare user input with stored value</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-lock"></i></div>
+                                    <div class="tool-name">Encryption/Decryption</div>
+                                </div>
+                                <p>Watch keys in memory</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-network-wired"></i></div>
+                                    <div class="tool-name">API Calls</div>
+                                </div>
+                                <p>Observe network or file operations</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-code-branch"></i></div>
+                                    <div class="tool-name">Conditional Logic</div>
+                                </div>
+                                <p>Follow if/else branches in real-time</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #1 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-brain"></i> Mental Model #1: Think Like the Program</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <strong>Predict</strong> what should happen
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Watch</strong> if it matches your prediction
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Step</strong> into instructions to understand deviations
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Dynamic analysis trains intuition about execution flow.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Example: Password Check -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-unlock-alt"></i> Example: Reverse Engineering a Password Check</h3>
+                    <div class="section-content">
+                        <p><strong>C code:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">if</span>(password[0] == <span class="code-string">'A'</span> && password[1] == <span class="code-string">'B'</span>)</div>
+                                <div class="code-line">    unlock();</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Dynamic analysis approach:</strong></p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> Set breakpoint at unlock() function
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> Observe password memory values
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> Modify register/memory to test different paths
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            You now understand exact conditions needed for success.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #2 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-eye"></i> Mental Model #2: Observation Before Modification</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <strong>Observe first</strong> → understand behavior
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Modify second</strong> → confirm logic
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Never assume</strong> static analysis tells the full story
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Dynamic analysis complements static analysis perfectly.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What You Should Be Comfortable With -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-check-circle"></i> What You Should Be Comfortable With After Phase 6</h3>
+                    <div class="section-content">
+                        <ul class="concept-list">
+                            <li class="concept-item">Running programs in debuggers safely</li>
+                            <li class="concept-item">Setting breakpoints and stepping through instructions</li>
+                            <li class="concept-item">Inspecting stack, heap, registers</li>
+                            <li class="concept-item">Observing function calls and API usage</li>
+                            <li class="concept-item">Modifying variables at runtime for testing</li>
+                        </ul>
+                        
+                        <div class="highlight-box" style="text-align: center; font-size: 1.1rem; padding: 20px;">
+                            Phase 6 equips you to see software breathe and interact with its logic in real-time.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="button-group">
+                    <button class="nav-btn" onclick="goToPhase(5)">
+                        <i class="fas fa-arrow-left"></i> Back to Phase 5
+                    </button>
+                    
+                    <button class="nav-btn next" onclick="goToPhase(7)">
+                        Continue to Phase 7 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation functions
+        function goToPhase(phaseNumber) {
+            const btn = event.target.closest('.nav-btn') || event.target;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = phaseNumber === 5 ? 
+                '<i class="fas fa-spinner fa-spin"></i> Loading...' : 
+                '<i class="fas fa-spinner fa-spin"></i> Loading Phase 7...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                if (phaseNumber === 5) {
+                    window.location.href = 'phase5.html';
+                } else {
+                    window.location.href = 'phase7.html';
+                    // alert('Phase 7 content will be loaded when provided.');
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 800);
+        }
+        
+        // Simple scroll effect
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateX(0)';
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            sections.forEach(section => {
+                section.style.opacity = '0.9';
+                section.style.transform = 'translateX(-10px)';
+                section.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>

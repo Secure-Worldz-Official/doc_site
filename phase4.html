@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Engineering - Phase 4: Decompilation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Reset - Clean */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .page-title h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #9d50bb, #00eeff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .page-title p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Main Theme Container */
+        .reverse-theme {
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(157, 80, 187, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .theme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(157, 80, 187, 0.3);
+            flex-wrap: wrap;
+        }
+        
+        .theme-header h2 {
+            font-size: 1.8rem;
+            color: #9d50bb;
+        }
+        
+        .phase-tag {
+            background: rgba(157, 80, 187, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #9d50bb;
+        }
+        
+        /* Navigation */
+        .phase-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-nav a {
+            color: #9d50bb;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-nav a.active {
+            background: rgba(157, 80, 187, 0.2);
+            border: 1px solid #9d50bb;
+        }
+        
+        .phase-nav a:hover:not(.active) {
+            background: rgba(157, 80, 187, 0.1);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #9d50bb;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-section:hover {
+            transform: translateX(5px);
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #9d50bb;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: rgba(157, 80, 187, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(157, 80, 187, 0.2);
+        }
+        
+        /* Quote Box */
+        .quote-box {
+            background: rgba(0, 238, 255, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #00eeff;
+            font-style: italic;
+        }
+        
+        /* Lists */
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .concept-item {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        /* Tool Cards */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .tool-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 238, 255, 0.2);
+        }
+        
+        .tool-title {
+            font-size: 1.2rem;
+            color: #00eeff;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        /* Code Container */
+        .code-container {
+            background: #0a0a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 238, 255, 0.3);
+            margin: 25px 0;
+        }
+        
+        .code-header {
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(0, 238, 255, 0.3);
+        }
+        
+        .code-title {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #00eeff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .code-box {
+            padding: 20px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            margin-bottom: 4px;
+            display: block;
+            white-space: pre;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .line-number {
+            color: #666;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        .code-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-keyword {
+            color: #9d50bb;
+            font-weight: 600;
+        }
+        
+        .code-string {
+            color: #ffbd2e;
+        }
+        
+        .code-cmd {
+            color: #27ca3f;
+        }
+        
+        .code-register {
+            color: #00eeff;
+        }
+        
+        .code-function {
+            color: #ff00ff;
+        }
+        
+        /* Comparison Side-by-side */
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .comparison-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .comparison-title {
+            font-size: 1.2rem;
+            color: #00eeff;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid rgba(0, 238, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        /* Process Steps */
+        .process-steps {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 25px 0;
+            border: 1px solid rgba(255, 189, 46, 0.2);
+        }
+        
+        .step {
+            margin: 15px 0;
+            padding: 12px 15px;
+            border-left: 3px solid #ffbd2e;
+            background: rgba(255, 189, 46, 0.05);
+        }
+        
+        .step-number {
+            color: #ffbd2e;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        /* Language Grid */
+        .language-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .language-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 0, 255, 0.2);
+        }
+        
+        .language-title {
+            font-size: 1.2rem;
+            color: #ff00ff;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        /* Button Group */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: rgba(157, 80, 187, 0.2);
+            color: white;
+            border: 1px solid #9d50bb;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(157, 80, 187, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn.next {
+            background: linear-gradient(90deg, #9d50bb, #00eeff);
+            border: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .page-title h1 {
+                font-size: 2.2rem;
+            }
+            
+            .reverse-theme {
+                padding: 20px;
+            }
+            
+            .theme-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .theme-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 1.2rem;
+            }
+            
+            .tool-grid, .language-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .reverse-theme {
+                padding: 15px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .code-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-title">
+            <h1>Reverse Engineering</h1>
+            <p>Phase 4: Decompilation – Guessing the Past 🧠</p>
+        </div>
+        
+        <div class="phase-nav">
+            <a href="#">Phase 1: Foundation</a>
+            <a href="#">Phase 2: Binary Basics</a>
+            <a href="#">Phase 3: Static Analysis</a>
+            <a href="#" class="active">Phase 4: Decompilation</a>
+        </div>
+        
+        <div class="reverse-theme">
+            <div class="theme-header">
+                <h2><i class="fas fa-archway"></i> The Archaeology of Code</h2>
+                <div class="phase-tag">PHASE 4: DECOMPILATION</div>
+            </div>
+            
+            <div class="article-content">
+                <!-- Introduction -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-history"></i> From Fragments to Understanding</h3>
+                    <div class="section-content">
+                        <p>Now that you've mastered static analysis, it's time for one of the most exciting phases: decompilation.</p>
+                        
+                        <div class="quote-box">
+                            Decompilation is like archaeology. You have fragments of an ancient civilization (the binary), and your job is to reconstruct the original code and logic as accurately as possible.
+                        </div>
+                        
+                        <p>Unlike static analysis, decompilation tries to give you high-level code, often resembling the original C, C++, Java, or Python. But remember: it's never perfect.</p>
+                    </div>
+                </div>
+                
+                <!-- What Decompilation Really Is -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-puzzle-piece"></i> What Decompilation Really Is</h3>
+                    <div class="section-content">
+                        <p>At its core, decompilation is:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Taking machine code or bytecode</li>
+                            <li class="concept-item">Reconstructing readable code</li>
+                            <li class="concept-item">Identifying structures, loops, and functions</li>
+                        </ul>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Assembly Input</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">cmp eax, 1337</div>
+                                        <div class="code-line">jne fail</div>
+                                        <div class="code-line">call success</div>
+                                        <div class="code-line">fail:</div>
+                                        <div class="code-line">mov eax, 0</div>
+                                        <div class="code-line">ret</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Decompiled Output (C-like)</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">if (input == 1337) {</div>
+                                        <div class="code-line">    success();</div>
+                                        <div class="code-line">} else {</div>
+                                        <div class="code-line">    return 0;</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            The logic is clear, even if variable names and comments are lost.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tools for Decompilation -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-tools"></i> Tools for Decompilation</h3>
+                    <div class="section-content">
+                        <p>Some of the most popular tools:</p>
+                        
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-title">Ghidra</div>
+                                <p>Free, powerful, multi-platform</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-title">IDA Pro + Hex-Rays</div>
+                                <p>Industry standard decompiler</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-title">Jadx</div>
+                                <p>Android APK decompiler</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-title">dnSpy / ILSpy</div>
+                                <p>.NET assemblies decompiler</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-title">pycdc / uncompyle6</div>
+                                <p>Python bytecode decompiler</p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Each tool has strengths depending on language and platform.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Decompiling C/C++ Binaries -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-cogs"></i> Decompiling C/C++ Binaries</h3>
+                    <div class="section-content">
+                        <p>C and C++ are compiled to raw machine code, often heavily optimized.</p>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Original C Code</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">int sum(int a, int b) {</div>
+                                        <div class="code-line">    return a + b;</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Compiled Assembly</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">mov eax, edi</div>
+                                        <div class="code-line">add eax, esi</div>
+                                        <div class="code-line">ret</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Decompiled Output</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">int sum(int a, int b) {</div>
+                                        <div class="code-line">    return a + b;</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p>Decompilers try to reconstruct high-level code, but face challenges:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Optimized instructions</li>
+                            <li class="concept-item">Removed variable names</li>
+                            <li class="concept-item">Inline functions</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            The mental skill is recognizing patterns.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Decompiling Different Languages -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-language"></i> Decompiling Different Languages</h3>
+                    <div class="section-content">
+                        <div class="language-grid">
+                            <div class="language-card">
+                                <div class="language-title">Java / .NET</div>
+                                <p>Compile to bytecode, retain more structure</p>
+                                <div class="code-container">
+                                    <div class="code-box" style="font-size: 0.9rem;">
+                                        <div class="code-line">if (role.equals("admin")) {</div>
+                                        <div class="code-line">    unlockAll();</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                                <p style="margin-top: 10px; font-size: 0.9rem; color: #00eeff;">
+                                    Decompiled via Jadx often matches almost perfectly
+                                </p>
+                            </div>
+                            
+                            <div class="language-card">
+                                <div class="language-title">Python</div>
+                                <p>Interpreted, .pyc files contain bytecode</p>
+                                <div class="code-container">
+                                    <div class="code-box" style="font-size: 0.9rem;">
+                                        <div class="code-line"><span class="code-cmd">uncompyle6</span> file.pyc > file.py</div>
+                                    </div>
+                                </div>
+                                <p style="margin-top: 10px; font-size: 0.9rem; color: #ff00ff;">
+                                    You recover high-level code, variable names, and structures
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Bytecode languages are friendlier for reverse engineers. Python is often called "the glass house" — anyone can peek inside.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- How to Read Decompiled Code -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-book-reader"></i> How to Read Decompiled Code</h3>
+                    <div class="section-content">
+                        <p>Decompiled code is rarely perfect:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Loops might appear as goto or while(true)</li>
+                            <li class="concept-item">Structures may be replaced by arrays or pointers</li>
+                            <li class="concept-item">Variable names are generic: v1, v2, a1, a2</li>
+                        </ul>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Original C++</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">class User {</div>
+                                        <div class="code-line">    int id;</div>
+                                        <div class="code-line">    bool isAdmin;</div>
+                                        <div class="code-line">public:</div>
+                                        <div class="code-line">    void login();</div>
+                                        <div class="code-line">};</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">After Decompilation</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">struct User {</div>
+                                        <div class="code-line">    int v1;</div>
+                                        <div class="code-line">    char v2;</div>
+                                        <div class="code-line">};</div>
+                                        <div class="code-line"></div>
+                                        <div class="code-line">void User_login(User* this);</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Even though names are gone, you recognize structure and methods.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cross-Referencing Strings -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-link"></i> Cross-Referencing Strings</h3>
+                    <div class="section-content">
+                        <p>Strings help in identifying function purposes:</p>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Assembly</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">mov rdi, offset "Invalid license"</div>
+                                        <div class="code-line">call printf</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Decompiled Output</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">printf("Invalid license");</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            By following string references, you understand the logic behind functions.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Decompiled Control Flow -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-sitemap"></i> Decompiled Control Flow</h3>
+                    <div class="section-content">
+                        <p>Decompilers attempt to rebuild loops and conditionals.</p>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Assembly Snippet</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">cmp eax, 10</div>
+                                        <div class="code-line">jl less</div>
+                                        <div class="code-line">jmp end</div>
+                                        <div class="code-line">less:</div>
+                                        <div class="code-line">sub eax, 1</div>
+                                        <div class="code-line">end:</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Decompiled Output</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">if (eax < 10) {</div>
+                                        <div class="code-line">    eax = eax - 1;</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Your job: verify if decompiler output matches real execution, especially with optimized binaries.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Android Decompilation -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fab fa-android"></i> Android Decompilation</h3>
+                    <div class="section-content">
+                        <p>APK contains .dex bytecode. Using Jadx:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Terminal command
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-cmd">jadx-gui</span> classes.dex</div>
+                            </div>
+                        </div>
+                        
+                        <p>You can explore:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Functions</li>
+                            <li class="concept-item">Strings</li>
+                            <li class="concept-item">Class hierarchies</li>
+                            <li class="concept-item">Permissions usage</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Even obfuscated apps often yield enough structure to understand flow.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Native Libraries in Android -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-code-branch"></i> Native Libraries in Android</h3>
+                    <div class="section-content">
+                        <p>Many apps include .so files (C/C++ libraries):</p>
+                        
+                        <div class="process-steps">
+                            <div class="step">
+                                <span class="step-number">1.</span> Use Ghidra or IDA to disassemble
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2.</span> Identify exported functions
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3.</span> Map to Java/Kotlin calls via JNI
+                            </div>
+                        </div>
+                        
+                        <p>Example JNI method:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-code"></i> JNI Native Function
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">JNIEXPORT jint JNICALL</div>
+                                <div class="code-line">Java_com_app_Main_add(JNIEnv* env,</div>
+                                <div class="code-line">                    jobject obj,</div>
+                                <div class="code-line">                    jint a,</div>
+                                <div class="code-line">                    jint b) {</div>
+                                <div class="code-line">    return a + b;</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            You can reconstruct logic even across languages.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Limitations of Decompilation -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> Limitations of Decompilation</h3>
+                    <div class="section-content">
+                        <p>Decompilers are helpers, not truth machines.</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item"><strong>Optimizations:</strong> Compiler may remove or reorder code</li>
+                            <li class="concept-item"><strong>Obfuscation:</strong> Names, classes, and logic flow may be hidden</li>
+                            <li class="concept-item"><strong>Inline functions:</strong> Harder to separate in decompiled output</li>
+                            <li class="concept-item"><strong>Pointers & memory access:</strong> May not translate cleanly</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #1 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-brain"></i> Mental Model #1: Read Patterns, Not Code</h3>
+                    <div class="section-content">
+                        <p>When reading decompiled code:</p>
+                        
+                        <div class="process-steps">
+                            <div class="step">
+                                <span class="step-number">•</span> Identify input/output relationships
+                            </div>
+                            <div class="step">
+                                <span class="step-number">•</span> Follow function calls
+                            </div>
+                            <div class="step">
+                                <span class="step-number">•</span> Track data flow
+                            </div>
+                            <div class="step">
+                                <span class="step-number">•</span> Names and comments are noise. Logic is the signal.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Example Workflows -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-tasks"></i> Example Workflows</h3>
+                    <div class="section-content">
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Decompiling a Binary</div>
+                                <div class="process-steps">
+                                    <div class="step">
+                                        <span class="step-number">1.</span> Load binary into Ghidra
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">2.</span> Analyze all sections
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">3.</span> Identify .text section (code)
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">4.</span> Look for string references
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">5.</span> Decompile functions
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">6.</span> Cross-reference calls and data
+                                    </div>
+                                </div>
+                                <p style="margin-top: 10px; font-size: 0.9rem; color: #9d50bb;">
+                                    This is your daily reverse engineering routine.
+                                </p>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Android APK</div>
+                                <div class="process-steps">
+                                    <div class="step">
+                                        <span class="step-number">1.</span> Unzip APK
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">2.</span> Use Jadx to view .dex files
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">3.</span> Identify key classes and methods
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">4.</span> Analyze string constants
+                                    </div>
+                                    <div class="step">
+                                        <span class="step-number">5.</span> Map functions to app behavior
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #2 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-lightbulb"></i> Mental Model #2: Guesswork With Structure</h3>
+                    <div class="section-content">
+                        <div class="quote-box">
+                            You are guessing intelligently. Every piece of code you see is a hint. Every string or function call gives context.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What You Should Be Comfortable With -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-check-circle"></i> What You Should Be Comfortable With After Phase 4</h3>
+                    <div class="section-content">
+                        <ul class="concept-list">
+                            <li class="concept-item">Decompiling C, C++, Java, Python, and Android apps</li>
+                            <li class="concept-item">Reading high-level reconstructed code</li>
+                            <li class="concept-item">Mapping logic without relying on variable names</li>
+                            <li class="concept-item">Understanding limits of decompilers</li>
+                            <li class="concept-item">Preparing for dynamic analysis</li>
+                        </ul>
+                        
+                        <div class="highlight-box" style="text-align: center; font-size: 1.1rem; padding: 20px;">
+                            Phase 4 gives you the ability to see the "story" behind machine instructions.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="button-group">
+                    <button class="nav-btn" onclick="goToPhase(3)">
+                        <i class="fas fa-arrow-left"></i> Back to Phase 3
+                    </button>
+                    
+                    <button class="nav-btn next" onclick="goToPhase(5)">
+                        Continue to Phase 5 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation functions
+        function goToPhase(phaseNumber) {
+            const btn = event.target.closest('.nav-btn') || event.target;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = phaseNumber === 3 ? 
+                '<i class="fas fa-spinner fa-spin"></i> Loading...' : 
+                '<i class="fas fa-spinner fa-spin"></i> Loading Phase 5...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                if (phaseNumber === 3) {
+                    // alert('Redirecting to Phase 3');
+                    window.location.href = 'phase3.html';
+                } else {
+                    window.location.href = 'phase5.html';
+                    // alert('Phase 5 content will be loaded when provided.');
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 800);
+        }
+        
+        // Simple scroll effect
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateX(0)';
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            sections.forEach(section => {
+                section.style.opacity = '0.9';
+                section.style.transform = 'translateX(-10px)';
+                section.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>

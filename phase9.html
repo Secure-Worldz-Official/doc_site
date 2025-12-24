@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Engineering - Phase 9: Anti-RE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Reset - Clean */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .page-title h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff8a00, #ff5f56);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .page-title p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Main Theme Container */
+        .reverse-theme {
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 138, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .theme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 138, 0, 0.3);
+            flex-wrap: wrap;
+        }
+        
+        .theme-header h2 {
+            font-size: 1.8rem;
+            color: #ff8a00;
+        }
+        
+        .phase-tag {
+            background: rgba(255, 138, 0, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #ff8a00;
+        }
+        
+        /* Navigation */
+        .phase-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-nav a {
+            color: #ff8a00;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-nav a.active {
+            background: rgba(255, 138, 0, 0.2);
+            border: 1px solid #ff8a00;
+        }
+        
+        .phase-nav a:hover:not(.active) {
+            background: rgba(255, 138, 0, 0.1);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #ff8a00;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-section:hover {
+            transform: translateX(5px);
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #ff8a00;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: rgba(255, 138, 0, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 138, 0, 0.2);
+        }
+        
+        /* Quote Box */
+        .quote-box {
+            background: rgba(255, 95, 86, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ff5f56;
+            font-style: italic;
+        }
+        
+        /* Lists */
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .concept-item {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        /* Defense Cards */
+        .defense-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .defense-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 95, 86, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .defense-card:hover {
+            transform: translateY(-5px);
+            border-color: #ff5f56;
+        }
+        
+        .defense-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .defense-icon {
+            font-size: 2rem;
+            color: #ff5f56;
+        }
+        
+        .defense-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #ff5f56;
+        }
+        
+        /* Code Container */
+        .code-container {
+            background: #0a0a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 95, 86, 0.3);
+            margin: 20px 0;
+        }
+        
+        .code-header {
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 95, 86, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #ff5f56;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .code-lang {
+            background: rgba(255, 95, 86, 0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .code-box {
+            padding: 20px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            margin-bottom: 4px;
+            display: block;
+            white-space: pre;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .line-number {
+            color: #666;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        .code-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-keyword {
+            color: #ff8a00;
+            font-weight: 600;
+        }
+        
+        .code-string {
+            color: #ffbd2e;
+        }
+        
+        .code-function {
+            color: #00eeff;
+        }
+        
+        .code-cmd {
+            color: #27ca3f;
+        }
+        
+        /* Comparison Side-by-side */
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .comparison-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .comparison-title {
+            font-size: 1.2rem;
+            color: #ffbd2e;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 189, 46, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        /* Workflow Steps */
+        .workflow {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border: 1px solid rgba(0, 238, 255, 0.2);
+        }
+        
+        .workflow-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 3px solid #00eeff;
+            background: rgba(0, 238, 255, 0.05);
+        }
+        
+        .step-number {
+            color: #00eeff;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        /* Mindset Boxes */
+        .mindset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .mindset-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(157, 80, 187, 0.2);
+        }
+        
+        .mindset-title {
+            font-size: 1.3rem;
+            color: #9d50bb;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        /* Bypass Techniques */
+        .bypass-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .bypass-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(39, 202, 63, 0.2);
+        }
+        
+        .bypass-title {
+            font-size: 1.1rem;
+            color: #27ca3f;
+            margin-bottom: 10px;
+        }
+        
+        /* Practice Ideas */
+        .practice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .practice-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 0, 255, 0.2);
+        }
+        
+        .practice-title {
+            font-size: 1.1rem;
+            color: #ff00ff;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        /* Button Group */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 138, 0, 0.2);
+            color: white;
+            border: 1px solid #ff8a00;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 138, 0, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn.next {
+            background: linear-gradient(90deg, #ff8a00, #ff5f56);
+            border: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .page-title h1 {
+                font-size: 2.2rem;
+            }
+            
+            .reverse-theme {
+                padding: 20px;
+            }
+            
+            .theme-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .theme-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 1.2rem;
+            }
+            
+            .defense-grid, .mindset-grid, .practice-grid, .bypass-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .reverse-theme {
+                padding: 15px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .code-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .defense-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-title">
+            <h1>Reverse Engineering</h1>
+            <p>Phase 9: Anti‑Reverse Engineering – When Software Tries to Fight Back 😄</p>
+        </div>
+        
+        <div class="phase-nav">
+            <a href="#">Phase 1: Foundation</a>
+            <a href="#">Phase 6: Dynamic Analysis</a>
+            <a href="#">Phase 8: Android RE</a>
+            <a href="#" class="active">Phase 9: Anti-RE</a>
+        </div>
+        
+        <div class="reverse-theme">
+            <div class="theme-header">
+                <h2><i class="fas fa-shield-alt"></i> When Software Gets Defensive</h2>
+                <div class="phase-tag">PHASE 9: ANTI-REVERSE ENGINEERING</div>
+            </div>
+            
+            <div class="article-content">
+                <!-- Introduction -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-gamepad"></i> The Game Gets Interesting</h3>
+                    <div class="section-content">
+                        <p>Alright, now the game gets interesting.</p>
+                        
+                        <p>Until now, software was mostly honest. It showed you logic, conditions, methods, and flow.</p>
+                        
+                        <div class="highlight-box">
+                            <p><strong>In this phase, software starts saying:</strong></p>
+                            <p style="text-align: center; font-size: 1.2rem; color: #ff5f56;">"Hey… stop looking at me like that."</p>
+                        </div>
+                        
+                        <p>This is anti‑reverse engineering — techniques used to slow you down, confuse you, or scare you away.</p>
+                        
+                        <div class="quote-box">
+                            And here's the calm truth:<br>
+                            Anti‑reverse engineering does not stop reverse engineers.<br>
+                            It only tests their patience and understanding.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What Anti-Reverse Engineering Really Is -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> What Anti‑Reverse Engineering Really Is</h3>
+                    <div class="section-content">
+                        <p>Anti‑reverse engineering is not invincibility. It is friction.</p>
+                        
+                        <div class="defense-grid">
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-hourglass-half"></i></div>
+                                    <div class="defense-name">Waste Your Time</div>
+                                </div>
+                                <p>Slow down analysis with complex code patterns</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-tools"></i></div>
+                                    <div class="defense-name">Break Your Tools</div>
+                                </div>
+                                <p>Cause disassemblers/decompilers to fail or produce garbage</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-brain"></i></div>
+                                    <div class="defense-name">Confuse Your Brain</div>
+                                </div>
+                                <p>Create misleading code paths and dead ends</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-eye-slash"></i></div>
+                                    <div class="defense-name">Hide Real Logic</div>
+                                </div>
+                                <p>Bury actual functionality under layers of nonsense</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Your job is not to panic.<br>
+                            Your job is to understand what the defense is trying to do.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- The Reverse Engineer's Mindset -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-brain"></i> The Reverse Engineer's Mindset Here</h3>
+                    <div class="section-content">
+                        <p>When you see protection, do not think:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-box" style="text-align: center; font-size: 1.1rem;">
+                                <div class="code-line"><span class="code-string">"Oh no, I'm blocked."</span></div>
+                            </div>
+                        </div>
+                        
+                        <p>Think:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-box" style="text-align: center; font-size: 1.1rem;">
+                                <div class="code-line"><span class="code-string">"Interesting. What are they trying to protect?"</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Defenses reveal what matters most in a program.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Obfuscation Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-eye-slash"></i> Obfuscation – Making Code Ugly on Purpose</h3>
+                    <div class="section-content">
+                        <p>Obfuscation transforms readable logic into chaos.</p>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Java Example Before Obfuscation</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-keyword">if</span> (isAdmin) {</div>
+                                        <div class="code-line">    unlockAll();</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">After Obfuscation</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-keyword">if</span> (a.b.c.d.e()) {</div>
+                                        <div class="code-line">    a.b.f.g.h();</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Logic unchanged.<br>
+                            Readability destroyed.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Types of Obfuscation -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-list"></i> Types of Obfuscation</h3>
+                    <div class="section-content">
+                        <p><strong>Common techniques:</strong></p>
+                        
+                        <div class="bypass-grid">
+                            <div class="bypass-card">
+                                <div class="bypass-title">Random Names</div>
+                                <p>Variables → a, b, c, var1, var2</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Control Flow Flattening</div>
+                                <p>Turn if/else into switch/goto spaghetti</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Fake Conditions</div>
+                                <p>Add checks that always pass/fail</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Dead Code Insertion</div>
+                                <p>Add unused functions and variables</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Logic Splitting</div>
+                                <p>Spread logic across many small functions</p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            The goal is confusion, not security.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Control Flow Obfuscation Example -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-project-diagram"></i> Control Flow Obfuscation</h3>
+                    <div class="section-content">
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Original Logic</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-keyword">if</span> (x == 1) {</div>
+                                        <div class="code-line">    doA();</div>
+                                        <div class="code-line">} <span class="code-keyword">else</span> {</div>
+                                        <div class="code-line">    doB();</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Obfuscated Version</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-keyword">switch</span>(state) {</div>
+                                        <div class="code-line">    <span class="code-keyword">case</span> 0: <span class="code-keyword">if</span>(x==1) state=2; <span class="code-keyword">else</span> state=3; <span class="code-keyword">break</span>;</div>
+                                        <div class="code-line">    <span class="code-keyword">case</span> 2: doA(); <span class="code-keyword">break</span>;</div>
+                                        <div class="code-line">    <span class="code-keyword">case</span> 3: doB(); <span class="code-keyword">break</span>;</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Same logic.<br>
+                            More headache.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #1 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-volume-mute"></i> Mental Model #1: Ignore the Noise</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <strong>What values actually matter?</strong><br>
+                                Ignore random variable names
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Which conditions control outcome?</strong><br>
+                                Find the checks that affect execution
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Where does execution really go?</strong><br>
+                                Trace actual control flow, not the mess
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Obfuscation adds noise, not meaning.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Packing Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-box"></i> Packing – Software Inside Software 📦</h3>
+                    <div class="section-content">
+                        <p>Packed binaries:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Compress or encrypt code</li>
+                            <li class="concept-item">Decrypt at runtime</li>
+                            <li class="concept-item">Execute from memory</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Static analysis fails.<br>
+                            Dynamic analysis wins.
+                        </div>
+                        
+                        <p><strong>Unpacking Conceptually:</strong></p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> Loader starts
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> Decrypts real code into memory
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> Jumps to decrypted code
+                            </div>
+                        </div>
+                        
+                        <p><strong>Your job:</strong></p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">①</span> Break after decryption
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">②</span> Dump memory
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">③</span> Analyze unpacked code
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Anti-Debugging -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-search"></i> Anti‑Debugging – "Are You Watching Me?"</h3>
+                    <div class="section-content">
+                        <p>Programs check:</p>
+                        
+                        <div class="bypass-grid">
+                            <div class="bypass-card">
+                                <div class="bypass-title">Debugger Attached?</div>
+                                <p>IsDebuggerPresent(), ptrace checks</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Breakpoints Present?</div>
+                                <p>Scan for INT3 instructions (0xCC)</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Timing Anomalies?</div>
+                                <p>Detect slowdown from stepping</p>
+                            </div>
+                        </div>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Windows Example</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-keyword">if</span> (IsDebuggerPresent()) {</div>
+                                        <div class="code-line">    exit(0);</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Linux Example</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">ptrace(PTRACE_TRACEME, 0, NULL, NULL);</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Debugger Detection Bypass -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-user-ninja"></i> Debugger Detection Bypass</h3>
+                    <div class="section-content">
+                        <p><strong>Common bypass strategies:</strong></p>
+                        
+                        <div class="defense-grid">
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-code"></i></div>
+                                    <div class="defense-name">Patch Checks</div>
+                                </div>
+                                <p>Modify the binary to remove debugger checks</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-exchange-alt"></i></div>
+                                    <div class="defense-name">Modify Return Values</div>
+                                </div>
+                                <p>Make API calls return "false" for debugger present</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-hook"></i></div>
+                                    <div class="defense-name">Hook API Calls</div>
+                                </div>
+                                <p>Intercept detection functions at runtime</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-forward"></i></div>
+                                    <div class="defense-name">Ignore Exit Paths</div>
+                                </div>
+                                <p>Skip over exit/crash instructions</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Defense exists.<br>
+                            So does understanding.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timing Checks -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-stopwatch"></i> Timing Checks</h3>
+                    <div class="section-content">
+                        <p><strong>Programs measure:</strong></p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Execution speed</li>
+                            <li class="concept-item">Instruction delays</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            Debuggers slow execution.<br>
+                            Software notices.
+                        </div>
+                        
+                        <p><strong>Reverse engineers:</strong></p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">•</span> Patch timing checks
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">•</span> Fake time values
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">•</span> Skip comparison logic
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Integrity Checks -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-fingerprint"></i> Anti‑Tampering and Integrity Checks</h3>
+                    <div class="section-content">
+                        <p>Software calculates:</p>
+                        
+                        <div class="bypass-grid">
+                            <div class="bypass-card">
+                                <div class="bypass-title">Checksums</div>
+                                <p>Simple validation of binary integrity</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Hashes</div>
+                                <p>MD5, SHA-1, SHA-256 of code sections</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Signatures</div>
+                                <p>Cryptographic verification</p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>If code changes:</strong></p>
+                            <ul>
+                                <li>Program crashes</li>
+                                <li>Program exits</li>
+                                <li>Program misbehaves</li>
+                            </ul>
+                        </div>
+                        
+                        <p><strong>Integrity Check Example:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">if</span> (hash(binary) != expected) {</div>
+                                <div class="code-line">    exit();</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Solutions:</strong></p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">①</span> Patch comparison (always return true)
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">②</span> Update expected hash
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">③</span> Disable check entirely
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Self-Modifying Code -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-sync-alt"></i> Self‑Modifying Code</h3>
+                    <div class="section-content">
+                        <p>Some programs:</p>
+                        
+                        <div class="highlight-box">
+                            <ul>
+                                <li>Modify their own instructions</li>
+                                <li>Change logic at runtime</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Static analysis becomes misleading.<br>
+                            Dynamic analysis becomes essential.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Android Anti-RE -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fab fa-android"></i> Android Anti‑RE Techniques</h3>
+                    <div class="section-content">
+                        <p><strong>Android apps use:</strong></p>
+                        
+                        <div class="defense-grid">
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-code"></i></div>
+                                    <div class="defense-name">ProGuard / R8 Obfuscation</div>
+                                </div>
+                                <p>Renaming classes, methods, and variables</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-mobile-alt"></i></div>
+                                    <div class="defense-name">Root Detection</div>
+                                </div>
+                                <p>Check for su binaries, rooted indicators</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-laptop"></i></div>
+                                    <div class="defense-name">Emulator Detection</div>
+                                </div>
+                                <p>Detect Android Studio emulators, Genymotion</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-search"></i></div>
+                                    <div class="defense-name">Debugger Detection</div>
+                                </div>
+                                <p>Android-specific debugger checks</p>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Example Android root detection:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">if</span> (Build.TAGS.contains("test-keys")) {</div>
+                                <div class="code-line">    exit();</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Reverse engineers:</strong></p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">•</span> Patch logic
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">•</span> Hook methods
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">•</span> Fake environment values
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Native Anti-RE -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-microchip"></i> Native Anti‑RE Techniques</h3>
+                    <div class="section-content">
+                        <p><strong>Native binaries may use:</strong></p>
+                        
+                        <div class="bypass-grid">
+                            <div class="bypass-card">
+                                <div class="bypass-title">Inline Assembly Tricks</div>
+                                <p>CPU-specific instructions to confuse tools</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Invalid Instructions</div>
+                                <p>Insert garbage bytes that crash disassemblers</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Exception-Based Flow</div>
+                                <p>Use exceptions for control flow instead of jumps</p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            These confuse disassemblers.<br>
+                            Not humans.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #2 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-book"></i> Mental Model #2: Defenses Are Documentation</h3>
+                    <div class="section-content">
+                        <p>Protection tells you:</p>
+                        
+                        <div class="mindset-grid">
+                            <div class="mindset-card">
+                                <div class="mindset-title">Critical Functions</div>
+                                <p>Which functions are most important to protect</p>
+                            </div>
+                            <div class="mindset-card">
+                                <div class="mindset-title">Important Checks</div>
+                                <p>Which validation checks really matter</p>
+                            </div>
+                            <div class="mindset-card">
+                                <div class="mindset-title">Trust Boundaries</div>
+                                <p>Where the software draws security lines</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Defense is accidental documentation.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Common Beginner Reactions -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-exclamation-circle"></i> Common Beginner Reactions (Avoid These)</h3>
+                    <div class="section-content">
+                        <div class="defense-grid">
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-bomb"></i></div>
+                                    <div class="defense-name">Defeat Everything</div>
+                                </div>
+                                <p>Trying to defeat all protections at once</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-lock"></i></div>
+                                    <div class="defense-name">Assume Unbeatable</div>
+                                </div>
+                                <p>Thinking protections are invincible</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-hourglass-end"></i></div>
+                                    <div class="defense-name">Waste Time</div>
+                                </div>
+                                <p>Spending hours on fake logic</p>
+                            </div>
+                            
+                            <div class="defense-card">
+                                <div class="defense-header">
+                                    <div class="defense-icon"><i class="fas fa-tools"></i></div>
+                                    <div class="defense-name">Fight Tools</div>
+                                </div>
+                                <p>Battling tools instead of understanding logic</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Calm beats cleverness.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Professional Approach -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-user-tie"></i> How Professionals Approach Anti‑RE</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> <strong>Identify</strong> protection type
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> <strong>Decide</strong> static or dynamic approach
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> <strong>Neutralize</strong> only what blocks analysis
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">4.</span> <strong>Ignore</strong> unnecessary layers
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">5.</span> <strong>Focus</strong> on real logic
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Practice Ideas -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-flask"></i> Practice Ideas</h3>
+                    <div class="section-content">
+                        <p><strong>Hands‑on exercises to build skill:</strong></p>
+                        
+                        <div class="practice-grid">
+                            <div class="practice-card">
+                                <div class="practice-title">Analyze Obfuscated Java App</div>
+                                <p>Decompile and understand ProGuard-protected code</p>
+                            </div>
+                            <div class="practice-card">
+                                <div class="practice-title">Identify Anti-Debug Checks</div>
+                                <p>Find and bypass debugger detection in a binary</p>
+                            </div>
+                            <div class="practice-card">
+                                <div class="practice-title">Detect Packing Behavior</div>
+                                <p>Identify packed executables and their unpackers</p>
+                            </div>
+                            <div class="practice-card">
+                                <div class="practice-title">Bypass Root Detection</div>
+                                <p>Make a root-detecting app work on rooted device</p>
+                            </div>
+                            <div class="practice-card">
+                                <div class="practice-title">Trace Integrity Checks</div>
+                                <p>Follow checksum/hash verification logic</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Skills Gained -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-check-circle"></i> What You Should Be Comfortable With After Phase 9</h3>
+                    <div class="section-content">
+                        <div class="bypass-grid">
+                            <div class="bypass-card">
+                                <div class="bypass-title">Recognizing Patterns</div>
+                                <p>Identifying obfuscation techniques</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Understanding Packing</div>
+                                <p>Knowing how packed binaries work</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Identifying Checks</div>
+                                <p>Spotting debugger and integrity checks</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Bypassing Logic</div>
+                                <p>Neutralizing basic anti‑RE protections</p>
+                            </div>
+                            <div class="bypass-card">
+                                <div class="bypass-title">Staying Calm</div>
+                                <p>Working methodically through complexity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Final Mindset -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-lightbulb"></i> Final Mindset</h3>
+                    <div class="section-content">
+                        <div class="highlight-box">
+                            Anti‑reverse engineering is not a wall.<br>
+                            It is a maze.
+                        </div>
+                        
+                        <div class="quote-box" style="text-align: center; font-size: 1.2rem; padding: 25px;">
+                            And reverse engineers are very good at mazes.<br>
+                            <span style="font-size: 1rem; color: #ffbd2e;">Because we understand how they're built.</span>
+                        </div>
+                        
+                        <div class="mindset-grid">
+                            <div class="mindset-card">
+                                <div class="mindset-title">Patience Wins</div>
+                                <p>Systematic analysis beats frantic clicking</p>
+                            </div>
+                            <div class="mindset-card">
+                                <div class="mindset-title">Understanding Unlocks</div>
+                                <p>Knowing why protection exists shows how to bypass it</p>
+                            </div>
+                            <div class="mindset-card">
+                                <div class="mindset-title">Every Maze Has Exits</div>
+                                <p>There's always a way through – find it methodically</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation Buttons -->
+            <div class="button-group">
+                <button class="nav-btn" onclick="restartJourney(8)">
+                    <i class="fas fa-arrow-left"></i> Back to Phase 8
+                </button>
+                <button class="nav-btn next" onclick="restartJourney(10)">
+                    Continue to Phase 9 <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Celebration effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add celebration animation
+            const celebration = document.createElement('div');
+            celebration.innerHTML = `
+                <style>
+                    @keyframes confetti {
+                        0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+                        100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+                    }
+                    .confetti {
+                        position: fixed;
+                        width: 10px;
+                        height: 20px;
+                        opacity: 0;
+                        pointer-events: none;
+                        z-index: 9999;
+                    }
+                </style>
+            `;
+            document.head.appendChild(celebration);
+            
+            // Create some initial confetti
+            for(let i = 0; i < 50; i++) {
+                createConfetti();
+            }
+            
+            function createConfetti() {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.background = ['#00eeff', '#ff00ff', '#ffbd2e', '#27ca3f'][Math.floor(Math.random() * 4)];
+                confetti.style.animation = `confetti ${2 + Math.random() * 3}s linear forwards`;
+                document.body.appendChild(confetti);
+                
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+            
+            // Interactive sections
+            const sections = document.querySelectorAll('.content-section');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        
+                        // Add confetti for some special sections
+                        if (entry.target.querySelector('.certificate') || 
+                            entry.target.classList.contains('reflection')) {
+                            for(let i = 0; i < 10; i++) {
+                                setTimeout(() => createConfetti(), i * 100);
+                            }
+                        }
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            sections.forEach(section => {
+                section.style.opacity = '0.9';
+                section.style.transform = 'translateY(20px)';
+                section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(section);
+            });
+            
+            // Certificate hover effect
+            const certificate = document.querySelector('.certificate');
+            if (certificate) {
+                certificate.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.02)';
+                    this.style.boxShadow = '0 0 40px rgba(0, 238, 255, 0.3)';
+                });
+                
+                certificate.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = 'none';
+                });
+            }
+        });
+        
+        function restartJourney(num) {
+            setTimeout(() => {
+                window.location.href = `phase${num}.html`;
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }
+        
+        // Print certificate
+        function printCertificate() {
+            window.print();
+        }
+    </script>
+</body>
+</html>

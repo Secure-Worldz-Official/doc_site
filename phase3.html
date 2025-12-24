@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Engineering - Phase 3: Static Analysis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Reset - Clean */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .page-title h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ffbd2e, #ff00ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .page-title p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Main Theme Container */
+        .reverse-theme {
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 189, 46, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .theme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 189, 46, 0.3);
+            flex-wrap: wrap;
+        }
+        
+        .theme-header h2 {
+            font-size: 1.8rem;
+            color: #ffbd2e;
+        }
+        
+        .phase-tag {
+            background: rgba(255, 189, 46, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #ffbd2e;
+        }
+        
+        /* Navigation */
+        .phase-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-nav a {
+            color: #ffbd2e;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-nav a.active {
+            background: rgba(255, 189, 46, 0.2);
+            border: 1px solid #ffbd2e;
+        }
+        
+        .phase-nav a:hover:not(.active) {
+            background: rgba(255, 189, 46, 0.1);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #ffbd2e;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-section:hover {
+            transform: translateX(5px);
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #ffbd2e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: rgba(255, 189, 46, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 189, 46, 0.2);
+        }
+        
+        /* Quote Box */
+        .quote-box {
+            background: rgba(255, 0, 255, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ff00ff;
+            font-style: italic;
+        }
+        
+        /* Lists */
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .concept-item {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        /* Tool Cards */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .tool-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 0, 255, 0.2);
+        }
+        
+        .tool-title {
+            font-size: 1.2rem;
+            color: #ff00ff;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        /* Code Container */
+        .code-container {
+            background: #0a0a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            margin: 25px 0;
+        }
+        
+        .code-header {
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 0, 255, 0.3);
+        }
+        
+        .code-title {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #ff00ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .code-box {
+            padding: 20px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            margin-bottom: 4px;
+            display: block;
+            white-space: pre;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .line-number {
+            color: #666;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        .code-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-keyword {
+            color: #ff00ff;
+            font-weight: 600;
+        }
+        
+        .code-string {
+            color: #ffbd2e;
+        }
+        
+        .code-cmd {
+            color: #27ca3f;
+        }
+        
+        .code-register {
+            color: #00eeff;
+        }
+        
+        .code-instruction {
+            color: #ffbd2e;
+        }
+        
+        /* Section Table */
+        .section-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .section-table th {
+            background: rgba(255, 189, 46, 0.1);
+            padding: 12px;
+            text-align: left;
+            color: #ffbd2e;
+            border: 1px solid rgba(255, 189, 46, 0.3);
+        }
+        
+        .section-table td {
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Comparison Side-by-side */
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .comparison-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .comparison-title {
+            font-size: 1.2rem;
+            color: #ff00ff;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 0, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        /* Flow Diagram */
+        .flow-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 25px 0;
+            border: 1px solid rgba(0, 238, 255, 0.2);
+        }
+        
+        .flow-step {
+            margin: 15px 0;
+            padding: 10px 15px;
+            border-left: 3px solid #00eeff;
+            background: rgba(0, 238, 255, 0.05);
+        }
+        
+        /* Button Group */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 189, 46, 0.2);
+            color: white;
+            border: 1px solid #ffbd2e;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 189, 46, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn.next {
+            background: linear-gradient(90deg, #ffbd2e, #ff00ff);
+            border: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .page-title h1 {
+                font-size: 2.2rem;
+            }
+            
+            .reverse-theme {
+                padding: 20px;
+            }
+            
+            .theme-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .theme-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 1.2rem;
+            }
+            
+            .tool-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .reverse-theme {
+                padding: 15px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .code-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-title">
+            <h1>Reverse Engineering</h1>
+            <p>Phase 3: Static Analysis - Reading Programs Without Running Them</p>
+        </div>
+        
+        <div class="phase-nav">
+            <a href="#">Phase 1: Foundation</a>
+            <a href="#">Phase 2: Binary Basics</a>
+            <a href="#" class="active">Phase 3: Static Analysis</a>
+        </div>
+        
+        <div class="reverse-theme">
+            <div class="theme-header">
+                <h2><i class="fas fa-search"></i> Reading the Diary Without Knocking</h2>
+                <div class="phase-tag">PHASE 3: STATIC ANALYSIS</div>
+            </div>
+            
+            <div class="article-content">
+                <!-- Introduction -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-book-open"></i> Opening the First Major Toolkit</h3>
+                    <div class="section-content">
+                        <p>Alright, now that you know what a binary really is and how CPUs think, it's time to open the first major toolkit: static analysis.</p>
+                        
+                        <div class="quote-box">
+                            Static analysis is like reading a diary without knocking on the door. You never run the program. You just listen to what it tells you through structure, strings, and instructions.
+                        </div>
+                        
+                        <p>The goal here is simple:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Learn about the program's logic</li>
+                            <li class="concept-item">See how it handles data</li>
+                            <li class="concept-item">Predict behavior without touching the execution</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Why Static Analysis Matters -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-question-circle"></i> Why Static Analysis Matters</h3>
+                    <div class="section-content">
+                        <p>Why bother not running the program?</p>
+                        
+                        <p>Because sometimes running it is:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Dangerous (malware, unknown binaries)</li>
+                            <li class="concept-item">Irreproducible (requires specific environment)</li>
+                            <li class="concept-item">Too slow for understanding the big picture</li>
+                        </ul>
+                        
+                        <p>Static analysis allows you to:</p>
+                        
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-title">Peek at Control Flow</div>
+                                <p>See how the program makes decisions without executing it</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-title">Discover Strings</div>
+                                <p>Find error messages, debug logs, API endpoints</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-title">Understand Function Calls</div>
+                                <p>Map out how functions interact with each other</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-title">Find Dependencies</div>
+                                <p>Identify libraries and external resources the program needs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- First Tool: strings -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-terminal"></i> First Tool: strings</h3>
+                    <div class="section-content">
+                        <p>You saw strings in Phase 2, but now we use it intentionally.</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Terminal command
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-cmd">strings</span> program.bin | less</div>
+                            </div>
+                        </div>
+                        
+                        <p>Look for:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Error messages</li>
+                            <li class="concept-item">Debug logs</li>
+                            <li class="concept-item">API endpoints</li>
+                            <li class="concept-item">Licensing or trial messages</li>
+                        </ul>
+                        
+                        <p>Example output:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-alt"></i> Example output
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-string">"Enter password:"</span></div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-string">"License expired"</span></div>
+                                <div class="code-line"><span class="line-number">3</span><span class="code-string">"Connecting to update server"</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>Even without execution, you know:</strong></p>
+                            <ul>
+                                <li>Program asks for a password</li>
+                                <li>Program has licensing logic</li>
+                                <li>Network communication exists</li>
+                            </ul>
+                            <p>You now predict behavior. That's the essence of static analysis.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Inspecting Headers and Metadata -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-file-medical-alt"></i> Inspecting Headers and Metadata</h3>
+                    <div class="section-content">
+                        <p>Every binary contains headers with important information.</p>
+                        
+                        <p><strong>Linux ELF example:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Terminal commands
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-cmd">readelf</span> -h program.bin</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-cmd">readelf</span> -S program.bin</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>-h shows:</strong></p>
+                        <ul class="concept-list">
+                            <li class="concept-item">Architecture (32/64-bit)</li>
+                            <li class="concept-item">Entry point</li>
+                            <li class="concept-item">Endianness</li>
+                        </ul>
+                        
+                        <p><strong>-S shows:</strong></p>
+                        <ul class="concept-list">
+                            <li class="concept-item">Sections</li>
+                            <li class="concept-item">Offsets</li>
+                            <li class="concept-item">Sizes</li>
+                        </ul>
+                        
+                        <p><strong>Windows PE example:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Windows command
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-cmd">dumpbin</span> /headers program.exe</div>
+                            </div>
+                        </div>
+                        
+                        <p>You see:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Entry point</li>
+                            <li class="concept-item">Sections: .text, .data, .rdata</li>
+                            <li class="concept-item">Imported DLLs</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            This is program anatomy.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Disassembly Basics -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-code"></i> Disassembly Basics</h3>
+                    <div class="section-content">
+                        <p>Now we step slightly deeper.</p>
+                        
+                        <p>Disassemblers like Ghidra or IDA Pro turn raw bytes into readable assembly:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-microchip"></i> Assembly instructions
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span>cmp <span class="code-register">eax</span>, 5</div>
+                                <div class="code-line"><span class="line-number">2</span>jne fail</div>
+                                <div class="code-line"><span class="line-number">3</span>call success</div>
+                            </div>
+                        </div>
+                        
+                        <p>Here we see:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Comparison</li>
+                            <li class="concept-item">Conditional jump</li>
+                            <li class="concept-item">Function call</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            Notice: no variable names, no comments. Only raw logic.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Understanding Control Flow -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-project-diagram"></i> Understanding Control Flow</h3>
+                    <div class="section-content">
+                        <p>Control flow defines the program's decisions.</p>
+                        
+                        <p><strong>Key instructions:</strong></p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">jmp — unconditional jump</li>
+                            <li class="concept-item">je/jne/jg/jl — conditional jumps</li>
+                            <li class="concept-item">call — function call</li>
+                            <li class="concept-item">ret — function return</li>
+                        </ul>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">C Code</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">if (x == 42) {</div>
+                                        <div class="code-line">    unlock_feature();</div>
+                                        <div class="code-line">} else {</div>
+                                        <div class="code-line">    deny_access();</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Assembly Version</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">cmp eax, 42</div>
+                                        <div class="code-line">jne deny</div>
+                                        <div class="code-line">call unlock_feature</div>
+                                        <div class="code-line">jmp end</div>
+                                        <div class="code-line">deny:</div>
+                                        <div class="code-line">call deny_access</div>
+                                        <div class="code-line">end:</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Static analysis is mapping these paths without running them.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sections and Their Meaning -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-th"></i> Sections and Their Meaning</h3>
+                    <div class="section-content">
+                        <p>A binary's sections tell you what type of data lives where.</p>
+                        
+                        <table class="section-table">
+                            <tr>
+                                <th>Section</th>
+                                <th>Purpose</th>
+                            </tr>
+                            <tr>
+                                <td>.text</td>
+                                <td>Executable code</td>
+                            </tr>
+                            <tr>
+                                <td>.data</td>
+                                <td>Global/static data</td>
+                            </tr>
+                            <tr>
+                                <td>.rodata</td>
+                                <td>Read-only constants, strings</td>
+                            </tr>
+                            <tr>
+                                <td>.bss</td>
+                                <td>Uninitialized global/static data</td>
+                            </tr>
+                            <tr>
+                                <td>.rdata (Windows)</td>
+                                <td>Read-only resources</td>
+                            </tr>
+                        </table>
+                        
+                        <div class="highlight-box">
+                            Knowing section contents helps you locate important info fast.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reversing Functions -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-functions"></i> Reversing Functions</h3>
+                    <div class="section-content">
+                        <p>Once disassembled, we start function analysis.</p>
+                        
+                        <p>Look at:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Function start and end</li>
+                            <li class="concept-item">Arguments (from calling conventions)</li>
+                            <li class="concept-item">Registers used</li>
+                            <li class="concept-item">Local variables (stack offsets)</li>
+                        </ul>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">C Function</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">int add(int a, int b) {</div>
+                                        <div class="code-line">    return a + b;</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Disassembly (simplified)</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">mov eax, edi</div>
+                                        <div class="code-line">add eax, esi</div>
+                                        <div class="code-line">ret</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Registers:</strong></p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">edi → first argument a</li>
+                            <li class="concept-item">esi → second argument b</li>
+                            <li class="concept-item">eax → return value</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Even without running, we know the function adds two numbers.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- String References in Assembly -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-quote-right"></i> String References in Assembly</h3>
+                    <div class="section-content">
+                        <p>Strings often reside in .rodata or .rdata.</p>
+                        
+                        <p>Example:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-microchip"></i> Assembly with string reference
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span>mov <span class="code-register">rdi</span>, offset error_msg</div>
+                                <div class="code-line"><span class="line-number">2</span>call printf</div>
+                            </div>
+                        </div>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">error_msg → could be "Invalid input"</li>
+                            <li class="concept-item">Assembly shows where and how messages are used</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            This is critical for understanding program behavior without execution.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Finding Imports -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-external-link-alt"></i> Finding Imports</h3>
+                    <div class="section-content">
+                        <p>Imports tell you what external functions the program relies on.</p>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Windows (PE)</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-cmd">dumpbin</span> /imports program.exe</div>
+                                    </div>
+                                </div>
+                                <p><strong>You might see:</strong></p>
+                                <ul class="concept-list">
+                                    <li>MessageBoxA → GUI message box</li>
+                                    <li>CreateFileA → file operations</li>
+                                    <li>Connect → network call</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Linux (ELF)</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-cmd">ldd</span> program</div>
+                                    </div>
+                                </div>
+                                <p><strong>Shows linked shared libraries:</strong></p>
+                                <ul class="concept-list">
+                                    <li>libc.so</li>
+                                    <li>libssl.so</li>
+                                </ul>
+                                <p>Gives context for runtime behavior</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #1 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-brain"></i> Mental Model #1: Everything Has a Trail</h3>
+                    <div class="section-content">
+                        <p>Even without running a program:</p>
+                        
+                        <div class="flow-diagram">
+                            <div class="flow-step">
+                                <strong>Strings leak logic</strong><br>
+                                Error messages reveal what the program checks for
+                            </div>
+                            <div class="flow-step">
+                                <strong>Imports show capabilities</strong><br>
+                                External functions tell what the program can do
+                            </div>
+                            <div class="flow-step">
+                                <strong>Sections hint at structure</strong><br>
+                                How the program organizes its code and data
+                            </div>
+                            <div class="flow-step">
+                                <strong>Jumps reveal control flow</strong><br>
+                                Conditional branches show decision points
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Static analysis is detective work: piece together the story from clues.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Using Ghidra for Static Analysis -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-toolbox"></i> Using Ghidra for Static Analysis</h3>
+                    <div class="section-content">
+                        <p>Ghidra simplifies static analysis:</p>
+                        
+                        <ol class="concept-list" style="list-style-type: decimal;">
+                            <li>Load binary</li>
+                            <li>Auto-analyze (Ghidra parses headers, sections, functions)</li>
+                            <li>Explore .text for functions</li>
+                            <li>Look at disassembled instructions</li>
+                            <li>Check string references (Shift+F12)</li>
+                        </ol>
+                        
+                        <p><strong>Example: guessing license check logic</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> C logic (what we're looking for)
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">if (license_code == 12345) {</div>
+                                <div class="code-line">    enable_features();</div>
+                                <div class="code-line">} else {</div>
+                                <div class="code-line">    disable_features();</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p>In Ghidra, you see:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Comparison instructions</li>
+                            <li class="concept-item">Conditional jumps</li>
+                            <li class="concept-item">Function call to enable/disable features</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            You now know logic without execution.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Static Analysis of Android APKs -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fab fa-android"></i> Static Analysis of Android APKs</h3>
+                    <div class="section-content">
+                        <p>APK is a ZIP container:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Terminal command
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-cmd">unzip</span> app.apk -d unpacked/</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Inside:</strong></p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">classes.dex → Java/Kotlin bytecode</li>
+                            <li class="concept-item">lib/ → native libraries (.so)</li>
+                            <li class="concept-item">AndroidManifest.xml → app permissions and activities</li>
+                        </ul>
+                        
+                        <p><strong>Use jadx:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Using jadx
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-cmd">jadx-gui</span> classes.dex</div>
+                            </div>
+                        </div>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Explore Java code</li>
+                            <li class="concept-item">Look for strings, conditionals, and functions</li>
+                            <li class="concept-item">Analyze logic statically</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Dealing With Obfuscation -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-eye-slash"></i> Dealing With Obfuscation</h3>
+                    <div class="section-content">
+                        <p>Some binaries intentionally hide logic:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Names replaced with meaningless letters</li>
+                            <li class="concept-item">Control flow flattened</li>
+                            <li class="concept-item">Junk instructions added</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Static analysis helps you see structure first, so later dynamic analysis is easier.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #2 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-search-plus"></i> Mental Model #2: Start Wide, Then Zoom</h3>
+                    <div class="section-content">
+                        <div class="flow-diagram">
+                            <div class="flow-step">
+                                <strong>1. Look at the whole binary</strong><br>
+                                Sections, imports, strings - get the big picture
+                            </div>
+                            <div class="flow-step">
+                                <strong>2. Identify critical functions</strong><br>
+                                What looks important? Entry points, main functions
+                            </div>
+                            <div class="flow-step">
+                                <strong>3. Explore instructions</strong><br>
+                                Control flow, data usage, and logic patterns
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box" style="text-align: center; font-size: 1.1rem; padding: 20px;">
+                            Static analysis is layered observation, not hacking.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="button-group">
+                    <button class="nav-btn" onclick="goToPhase(2)">
+                        <i class="fas fa-arrow-left"></i> Back to Phase 2
+                    </button>
+                    
+                    <button class="nav-btn next" onclick="goToPhase(4)">
+                        Continue to Phase 4 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation functions
+        function goToPhase(phaseNumber) {
+            const btn = event.target.closest('.nav-btn') || event.target;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = phaseNumber === 2 ? 
+                '<i class="fas fa-spinner fa-spin"></i> Loading...' : 
+                '<i class="fas fa-spinner fa-spin"></i> Loading Phase 4...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                if (phaseNumber === 2) {
+                    window.location.href = 'phase2.html';
+                } else {
+                    window.location.href = 'phase4.html';
+                    // alert('Phase 4 content will be loaded when provided.');
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 800);
+        }
+        
+        // Simple scroll effect
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateX(0)';
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            sections.forEach(section => {
+                section.style.opacity = '0.9';
+                section.style.transform = 'translateX(-10px)';
+                section.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>

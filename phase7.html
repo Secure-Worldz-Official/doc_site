@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Engineering - Phase 7: Binary Modification & Patching</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Reset - Clean */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .page-title h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #9d50bb, #6e48aa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .page-title p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Main Theme Container */
+        .reverse-theme {
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(157, 80, 187, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .theme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(157, 80, 187, 0.3);
+            flex-wrap: wrap;
+        }
+        
+        .theme-header h2 {
+            font-size: 1.8rem;
+            color: #9d50bb;
+        }
+        
+        .phase-tag {
+            background: rgba(157, 80, 187, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #9d50bb;
+        }
+        
+        /* Navigation */
+        .phase-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-nav a {
+            color: #9d50bb;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-nav a.active {
+            background: rgba(157, 80, 187, 0.2);
+            border: 1px solid #9d50bb;
+        }
+        
+        .phase-nav a:hover:not(.active) {
+            background: rgba(157, 80, 187, 0.1);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #9d50bb;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-section:hover {
+            transform: translateX(5px);
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #9d50bb;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: rgba(157, 80, 187, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(157, 80, 187, 0.2);
+        }
+        
+        /* Quote Box */
+        .quote-box {
+            background: rgba(110, 72, 170, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #6e48aa;
+            font-style: italic;
+        }
+        
+        /* Lists */
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .concept-item {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        /* Tool Cards */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .tool-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(110, 72, 170, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-5px);
+            border-color: #6e48aa;
+        }
+        
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .tool-icon {
+            font-size: 2rem;
+            color: #6e48aa;
+        }
+        
+        .tool-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #6e48aa;
+        }
+        
+        /* Code Container */
+        .code-container {
+            background: #0a0a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(110, 72, 170, 0.3);
+            margin: 20px 0;
+        }
+        
+        .code-header {
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(110, 72, 170, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #6e48aa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .code-lang {
+            background: rgba(110, 72, 170, 0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .code-box {
+            padding: 20px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            margin-bottom: 4px;
+            display: block;
+            white-space: pre;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .line-number {
+            color: #666;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        /* Syntax Highlighting */
+        .code-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-keyword {
+            color: #9d50bb;
+            font-weight: 600;
+        }
+        
+        .code-string {
+            color: #ffbd2e;
+        }
+        
+        .code-function {
+            color: #00eeff;
+        }
+        
+        .code-cmd {
+            color: #27ca3f;
+        }
+        
+        .code-register {
+            color: #ff5f56;
+        }
+        
+        .code-asm {
+            color: #6e48aa;
+        }
+        
+        .code-patch {
+            color: #27ca3f;
+            font-weight: bold;
+        }
+        
+        .code-nop {
+            color: #ffbd2e;
+        }
+        
+        /* Patch Visualization */
+        .patch-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 189, 46, 0.2);
+        }
+        
+        .patch-from, .patch-to {
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .patch-from {
+            background: rgba(255, 95, 86, 0.1);
+            border: 1px solid rgba(255, 95, 86, 0.3);
+        }
+        
+        .patch-to {
+            background: rgba(39, 202, 63, 0.1);
+            border: 1px solid rgba(39, 202, 63, 0.3);
+        }
+        
+        .patch-arrow {
+            color: #9d50bb;
+            font-size: 2rem;
+        }
+        
+        /* Byte Display */
+        .byte-display {
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 0 2px;
+            border: 1px solid rgba(110, 72, 170, 0.2);
+            font-size: 0.9rem;
+        }
+        
+        /* Comparison Grid */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .comparison-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 238, 255, 0.2);
+        }
+        
+        .comparison-title {
+            font-size: 1.2rem;
+            color: #00eeff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        /* Workflow Steps */
+        .workflow {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border: 1px solid rgba(255, 95, 86, 0.2);
+        }
+        
+        .workflow-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 3px solid #ff5f56;
+            background: rgba(255, 95, 86, 0.05);
+        }
+        
+        .step-number {
+            color: #ff5f56;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        /* Command Cards */
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .command-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(157, 80, 187, 0.2);
+        }
+        
+        .command-name {
+            color: #9d50bb;
+            font-family: 'Monaco', 'Consolas', monospace;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        /* Button Group */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: rgba(157, 80, 187, 0.2);
+            color: white;
+            border: 1px solid #9d50bb;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(157, 80, 187, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn.next {
+            background: linear-gradient(90deg, #9d50bb, #6e48aa);
+            border: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .page-title h1 {
+                font-size: 2.2rem;
+            }
+            
+            .reverse-theme {
+                padding: 20px;
+            }
+            
+            .theme-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .theme-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 1.2rem;
+            }
+            
+            .tool-grid, .commands-grid, .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .patch-visual {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .reverse-theme {
+                padding: 15px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .code-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .tool-card {
+                padding: 20px;
+            }
+            
+            .patch-from, .patch-to {
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-title">
+            <h1>Reverse Engineering</h1>
+            <p>Phase 7: Binary Modification & Patching – Teaching Software New Tricks 😄</p>
+        </div>
+        
+        <div class="phase-nav">
+            <a href="#">Phase 1: Foundation</a>
+            <a href="#">Phase 2: Binary Basics</a>
+            <a href="#">Phase 3: Static Analysis</a>
+            <a href="#">Phase 4: Decompilation</a>
+            <a href="#">Phase 5: Language-Specific</a>
+            <a href="#">Phase 6: Dynamic Analysis</a>
+            <a href="#" class="active">Phase 7: Binary Patching</a>
+        </div>
+        
+        <div class="reverse-theme">
+            <div class="theme-header">
+                <h2><i class="fas fa-magic"></i> The Magic of Binary Patching</h2>
+                <div class="phase-tag">PHASE 7: BINARY MODIFICATION</div>
+            </div>
+            
+            <div class="article-content">
+                <!-- Introduction -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-play"></i> The Moment It All Clicks</h3>
+                    <div class="section-content">
+                        <p>Alright, now things start to feel a little magical — but don't worry, it's logic, not black magic. Up to now, you've been reading software and watching it run. In this phase, we gently take the next step:</p>
+                        
+                        <div class="highlight-box">
+                            <p><strong>We change what the software does.</strong></p>
+                            <p>Not by rewriting source code. Not by recompiling. But by modifying the binary itself.</p>
+                            <p>This is where reverse engineering truly clicks for many people.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What Binary Patching Really Means -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-railway"></i> What Binary Patching Really Means</h3>
+                    <div class="section-content">
+                        <p>Binary patching means:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Changing instructions inside a compiled program</li>
+                            <li class="concept-item">Modifying control flow</li>
+                            <li class="concept-item">Altering logic checks</li>
+                            <li class="concept-item">Redirecting execution paths</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Think of software like a railway system 🚆<br>
+                            Binary patching is changing the tracks, not the train.
+                        </div>
+                        
+                        <p>You are not destroying the program — you are redirecting its decisions.</p>
+                    </div>
+                </div>
+                
+                <!-- Why Binary Patching Exists -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-question-circle"></i> Why Binary Patching Exists</h3>
+                    <div class="section-content">
+                        <p>Binary patching is used for:</p>
+                        
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <div class="comparison-title">Understanding</div>
+                                <ul class="concept-list">
+                                    <li class="concept-item">Understanding program logic</li>
+                                    <li class="concept-item">Research and education</li>
+                                    <li class="concept-item">Confirming hypotheses</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="comparison-card">
+                                <div class="comparison-title">Practical</div>
+                                <ul class="concept-list">
+                                    <li class="concept-item">Fixing bugs without source</li>
+                                    <li class="concept-item">Security testing</li>
+                                    <li class="concept-item">Malware analysis</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>Most importantly:</strong></p>
+                            <p>Binary patching teaches how fragile logic really is.</p>
+                            <p>One instruction. One jump. Everything changes.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- The Golden Rule -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-gem"></i> The Golden Rule Before Touching Anything</h3>
+                    <div class="section-content">
+                        <p>Before patching, always:</p>
+                        <ul class="concept-list">
+                            <li class="concept-item">Understand the logic (static analysis)</li>
+                            <li class="concept-item">Confirm behavior (dynamic analysis)</li>
+                            <li class="concept-item">Identify the exact instruction responsible</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Patching without understanding is guessing.<br>
+                            Reverse engineering is not guessing.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Control Flow: The Heart of Patching -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-random"></i> Control Flow: The Heart of Patching</h3>
+                    <div class="section-content">
+                        <p>Most patches revolve around control flow instructions.</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-microchip"></i> Common x86/x64 Control Flow Instructions
+                                </div>
+                                <div class="code-lang">Assembly</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-asm">je</span>  → jump if equal</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-asm">jne</span> → jump if not equal</div>
+                                <div class="code-line"><span class="line-number">3</span><span class="code-asm">jg</span>  → jump if greater</div>
+                                <div class="code-line"><span class="line-number">4</span><span class="code-asm">jl</span>  → jump if less</div>
+                                <div class="code-line"><span class="line-number">5</span><span class="code-asm">jmp</span> → unconditional jump</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Example assembly:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-code"></i> Original Logic
+                                </div>
+                                <div class="code-lang">Assembly</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-asm">cmp</span> <span class="code-register">eax</span>, 1</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-asm">jne</span> fail</div>
+                                <div class="code-line"><span class="line-number">3</span><span class="code-asm">call</span> success</div>
+                            </div>
+                        </div>
+                        
+                        <p>Logic: If eax != 1, go to fail. Else, call success.</p>
+                        
+                        <div class="highlight-box">
+                            A single instruction controls everything.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- The Simplest Patch -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-code-branch"></i> The Simplest Patch: Conditional to Unconditional</h3>
+                    <div class="section-content">
+                        <p><strong>Original:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-asm">cmp</span> <span class="code-register">eax</span>, 1</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-asm">jne</span> fail</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Patched (Option 1 - Always succeed):</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-asm">cmp</span> <span class="code-register">eax</span>, 1</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-asm code-patch">jmp</span> success</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Patched (Option 2 - Remove check):</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-asm">cmp</span> <span class="code-register">eax</span>, 1</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-nop code-patch">nop</span></div>
+                                <div class="code-line"><span class="line-number">3</span><span class="code-nop code-patch">nop</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Now the check exists, but it does nothing.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Understanding NOP -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-tape"></i> Understanding NOP (No Operation)</h3>
+                    <div class="section-content">
+                        <p><span class="code-asm">nop</span> means:</p>
+                        
+                        <div class="highlight-box">
+                            "Do nothing. Move to the next instruction."
+                        </div>
+                        
+                        <p>It is the duct tape of reverse engineering 😄</p>
+                        
+                        <div class="patch-visual">
+                            <div class="patch-from">
+                                <div style="font-size: 1.2rem; margin-bottom: 5px;">
+                                    <span class="byte-display">75 0A</span>
+                                </div>
+                                <div>jne +10</div>
+                            </div>
+                            <div class="patch-arrow">
+                                <i class="fas fa-long-arrow-alt-right"></i>
+                            </div>
+                            <div class="patch-to">
+                                <div style="font-size: 1.2rem; margin-bottom: 5px;">
+                                    <span class="byte-display">90 90</span>
+                                </div>
+                                <div>nop nop</div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Two bytes. Two nops. Logic gone.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Static vs Runtime Patching -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-exchange-alt"></i> Static Patching vs Runtime Patching</h3>
+                    <div class="section-content">
+                        
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <div class="comparison-title">Static Patching</div>
+                                <ul class="concept-list">
+                                    <li class="concept-item">Modify the binary file on disk</li>
+                                    <li class="concept-item">Changes are permanent</li>
+                                    <li class="concept-item">Requires recalculating offsets</li>
+                                </ul>
+                                <p style="font-style: italic; margin-top: 10px; color: #00eeff;">
+                                    Editing the blueprint permanently
+                                </p>
+                            </div>
+                            
+                            <div class="comparison-card">
+                                <div class="comparison-title">Runtime Patching</div>
+                                <ul class="concept-list">
+                                    <li class="concept-item">Modify instructions in memory</li>
+                                    <li class="concept-item">Changes disappear after restart</li>
+                                    <li class="concept-item">Safer for experimentation</li>
+                                </ul>
+                                <p style="font-style: italic; margin-top: 10px; color: #ff00ff;">
+                                    Changing the tracks while the train runs
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Both are important. Runtime patching is usually learned first.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Runtime Patching Example -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-play-circle"></i> Runtime Patching Example (x64dbg)</h3>
+                    <div class="section-content">
+                        <p>Imagine a password check inside a Windows program.</p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> Load binary in x64dbg
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> Run until password check
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> Find comparison instruction
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">4.</span> Right-click → Assemble
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">5.</span> Change conditional jump to jmp
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            No source code. No rebuild. Behavior changed.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Patching with gdb -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fab fa-linux"></i> Patching with gdb (Linux)</h3>
+                    <div class="section-content">
+                        <p><strong>Example:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-asm">cmp</span> <span class="code-register">eax</span>, 1337</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-asm">jne</span> fail</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>At runtime in gdb:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> gdb Commands
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-cmd">(gdb)</span> set $eax = 1337</div>
+                                <div class="code-line"><span class="code-cmd">(gdb)</span> continue</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Or patch instruction bytes:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-cmd">(gdb)</span> set {unsigned char}0x40123A = 0x90</div>
+                                <div class="code-line"><span class="code-cmd">(gdb)</span> set {unsigned char}0x40123B = 0x90</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Two bytes. Two nops. Logic gone.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Byte Level Patching -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-binary"></i> Binary Patching at the Byte Level</h3>
+                    <div class="section-content">
+                        <p>Assembly is human-readable. Binaries are bytes.</p>
+                        
+                        <div class="patch-visual">
+                            <div class="patch-from">
+                                <div style="font-size: 1.2rem; margin-bottom: 5px;">
+                                    <span class="byte-display">75 0A</span>
+                                </div>
+                                <div>jne +10</div>
+                            </div>
+                            <div class="patch-arrow">
+                                <i class="fas fa-long-arrow-alt-right"></i>
+                            </div>
+                            <div class="patch-to">
+                                <div style="font-size: 1.2rem; margin-bottom: 5px;">
+                                    <span class="byte-display">90 90</span>
+                                </div>
+                                <div>nop nop</div>
+                            </div>
+                        </div>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-microchip"></i> Common Opcode Bytes
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-asm">jne</span> → opcode <span class="byte-display">75</span></div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-asm">jmp</span> → opcode <span class="byte-display">EB</span></div>
+                                <div class="code-line"><span class="line-number">3</span><span class="code-asm">nop</span> → opcode <span class="byte-display">90</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            That's it. That's the patch.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- C Example: License Check -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-key"></i> C Example: License Check</h3>
+                    <div class="section-content">
+                        <p><strong>Original C logic:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> Original C Code
+                                </div>
+                                <div class="code-lang">C</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">if</span>(!check_license()) {</div>
+                                <div class="code-line">    printf(<span class="code-string">"Invalid license\n"</span>);</div>
+                                <div class="code-line">    exit(0);</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Reverse engineered result:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-microchip"></i> Assembly Equivalent
+                                </div>
+                                <div class="code-lang">Assembly</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="line-number">1</span><span class="code-asm">call</span> check_license</div>
+                                <div class="code-line"><span class="line-number">2</span><span class="code-asm">test</span> <span class="code-register">eax</span>, <span class="code-register">eax</span></div>
+                                <div class="code-line"><span class="line-number">3</span><span class="code-asm">jz</span> exit_program</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Patch options:</strong></p>
+                        <ul class="concept-list">
+                            <li class="concept-item">Force return value to 1</li>
+                            <li class="concept-item">Remove conditional jump</li>
+                            <li class="concept-item">Skip exit() call</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            Multiple paths. Same result.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Android Binary Patching -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fab fa-android"></i> Android Binary Patching (APK Level)</h3>
+                    <div class="section-content">
+                        <p>Android gives you two patching layers:</p>
+                        
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fab fa-java"></i></div>
+                                    <div class="tool-name">Java/Kotlin (Smali)</div>
+                                </div>
+                                <p>Modify decompiled bytecode</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-microchip"></i></div>
+                                    <div class="tool-name">Native Libraries (.so files)</div>
+                                </div>
+                                <p>Patch C/C++ libraries</p>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Smali Patch Example:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-code"></i> Original Smali
+                                </div>
+                                <div class="code-lang">Smali</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">if-eqz v0, :fail</div>
+                                <div class="code-line">invoke-static {}, Lcom/app/Main;->success()V</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Patched:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-patch">goto :success</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Logic rewritten in seconds.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Models -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-brain"></i> Mental Models for Binary Patching</h3>
+                    <div class="section-content">
+                        <p><strong>Mental Model #1: Patching Is Proof, Not Cheating</strong></p>
+                        <p>Binary patching proves:</p>
+                        <ul class="concept-list">
+                            <li class="concept-item">You understood the logic</li>
+                            <li class="concept-item">You identified the correct instruction</li>
+                            <li class="concept-item">You confirmed behavior dynamically</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            If your patch works, your understanding was correct.
+                        </div>
+                        
+                        <p><strong>Mental Model #2: Small Changes, Big Effects</strong></p>
+                        <div class="highlight-box">
+                            <p>Reverse engineering teaches humility.</p>
+                            <p>A billion-line software product can fall because of one jump instruction.</p>
+                            <p>This is why defense matters, layers matter, server-side validation matters.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Practice Ideas -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-flask"></i> Practice Ideas</h3>
+                    <div class="section-content">
+                        <ul class="concept-list">
+                            <li class="concept-item">Patch a trial expiration check</li>
+                            <li class="concept-item">Patch a debug-only feature</li>
+                            <li class="concept-item">Patch a hidden menu unlock</li>
+                            <li class="concept-item">Patch a fake license check (self-written program)</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Always practice on your own binaries first.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Common Beginner Mistakes -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> Common Beginner Mistakes</h3>
+                    <div class="section-content">
+                        <ul class="concept-list">
+                            <li class="concept-item">Patching before understanding</li>
+                            <li class="concept-item">Trusting decompiler blindly</li>
+                            <li class="concept-item">Forgetting instruction size</li>
+                            <li class="concept-item">Breaking offsets and crashes</li>
+                        </ul>
+                        
+                        <div class="highlight-box">
+                            Good reverse engineers go slow.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What You Should Be Comfortable With -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-check-circle"></i> What You Should Be Comfortable With After Phase 7</h3>
+                    <div class="section-content">
+                        <ul class="concept-list">
+                            <li class="concept-item">Identifying logic checks</li>
+                            <li class="concept-item">Understanding conditional jumps</li>
+                            <li class="concept-item">Runtime patching safely</li>
+                            <li class="concept-item">Static patching with care</li>
+                            <li class="concept-item">Thinking in control flow, not code</li>
+                        </ul>
+                        
+                        <div class="highlight-box" style="text-align: center; font-size: 1.1rem; padding: 20px;">
+                            You now understand that software behavior is negotiable —<br>
+                            not by force, but by logic.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="button-group">
+                    <button class="nav-btn" onclick="goToPhase(6)">
+                        <i class="fas fa-arrow-left"></i> Back to Phase 6
+                    </button>
+                    
+                    <button class="nav-btn next" onclick="goToPhase(8)">
+                        Continue to Phase 8 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation functions
+        function goToPhase(phaseNumber) {
+            const btn = event.target.closest('.nav-btn') || event.target;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = phaseNumber === 6 ? 
+                '<i class="fas fa-spinner fa-spin"></i> Loading...' : 
+                '<i class="fas fa-spinner fa-spin"></i> Loading Phase 8...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                if (phaseNumber === 6) {
+                    window.location.href = 'phase6.html';
+                } else {
+                    window.location.href = 'phase8.html';
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 800);
+        }
+        
+        // Interactive patch visualization
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateX(0)';
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            sections.forEach(section => {
+                section.style.opacity = '0.9';
+                section.style.transform = 'translateX(-10px)';
+                section.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                observer.observe(section);
+            });
+            
+            // Make patch visualizations interactive
+            document.querySelectorAll('.patch-visual').forEach(patch => {
+                patch.addEventListener('click', function() {
+                    this.style.borderColor = 'rgba(255, 189, 46, 0.5)';
+                    this.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        this.style.borderColor = 'rgba(255, 189, 46, 0.2)';
+                        this.style.transform = 'scale(1)';
+                    }, 300);
+                });
+            });
+            
+            // Highlight patch examples
+            document.querySelectorAll('.code-patch').forEach(patch => {
+                patch.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = 'rgba(39, 202, 63, 0.2)';
+                });
+                patch.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'transparent';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

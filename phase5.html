@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Engineering - Phase 5: Language-Specific RE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Reset - Clean */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .page-title h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #27ca3f, #00eeff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .page-title p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Main Theme Container */
+        .reverse-theme {
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(39, 202, 63, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .theme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(39, 202, 63, 0.3);
+            flex-wrap: wrap;
+        }
+        
+        .theme-header h2 {
+            font-size: 1.8rem;
+            color: #27ca3f;
+        }
+        
+        .phase-tag {
+            background: rgba(39, 202, 63, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #27ca3f;
+        }
+        
+        /* Navigation */
+        .phase-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-nav a {
+            color: #27ca3f;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-nav a.active {
+            background: rgba(39, 202, 63, 0.2);
+            border: 1px solid #27ca3f;
+        }
+        
+        .phase-nav a:hover:not(.active) {
+            background: rgba(39, 202, 63, 0.1);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #27ca3f;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-section:hover {
+            transform: translateX(5px);
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #27ca3f;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: rgba(39, 202, 63, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(39, 202, 63, 0.2);
+        }
+        
+        /* Quote Box */
+        .quote-box {
+            background: rgba(0, 238, 255, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #00eeff;
+            font-style: italic;
+        }
+        
+        /* Lists */
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .concept-item {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        /* Language Cards */
+        .language-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .language-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 238, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .language-card:hover {
+            transform: translateY(-5px);
+            border-color: #00eeff;
+        }
+        
+        .language-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .language-icon {
+            font-size: 2rem;
+            color: #ff00ff;
+        }
+        
+        .language-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #00eeff;
+        }
+        
+        .language-desc {
+            color: #aaa;
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+        
+        /* Code Container */
+        .code-container {
+            background: #0a0a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            margin: 20px 0;
+        }
+        
+        .code-header {
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 0, 255, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #ff00ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .code-lang {
+            background: rgba(255, 0, 255, 0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .code-box {
+            padding: 20px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            margin-bottom: 4px;
+            display: block;
+            white-space: pre;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .line-number {
+            color: #666;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        .code-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-keyword {
+            color: #ff00ff;
+            font-weight: 600;
+        }
+        
+        .code-string {
+            color: #ffbd2e;
+        }
+        
+        .code-function {
+            color: #00eeff;
+        }
+        
+        .code-class {
+            color: #27ca3f;
+        }
+        
+        /* Tool Table */
+        .tool-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+        
+        .tool-table th {
+            background: rgba(255, 189, 46, 0.1);
+            padding: 12px;
+            text-align: left;
+            color: #ffbd2e;
+            border: 1px solid rgba(255, 189, 46, 0.3);
+        }
+        
+        .tool-table td {
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Workflow Steps */
+        .workflow {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border: 1px solid rgba(255, 189, 46, 0.2);
+        }
+        
+        .workflow-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 3px solid #ffbd2e;
+            background: rgba(255, 189, 46, 0.05);
+        }
+        
+        .step-number {
+            color: #ffbd2e;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        /* Button Group */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: rgba(39, 202, 63, 0.2);
+            color: white;
+            border: 1px solid #27ca3f;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(39, 202, 63, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn.next {
+            background: linear-gradient(90deg, #27ca3f, #00eeff);
+            border: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .page-title h1 {
+                font-size: 2.2rem;
+            }
+            
+            .reverse-theme {
+                padding: 20px;
+            }
+            
+            .theme-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .theme-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 1.2rem;
+            }
+            
+            .language-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .reverse-theme {
+                padding: 15px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .code-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .language-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-title">
+            <h1>Reverse Engineering</h1>
+            <p>Phase 5: Language-Specific Reverse Engineering - The Playground of Languages 🎢</p>
+        </div>
+        
+        <div class="phase-nav">
+            <a href="#">Phase 1: Foundation</a>
+            <a href="#">Phase 2: Binary Basics</a>
+            <a href="#">Phase 3: Static Analysis</a>
+            <a href="#">Phase 4: Decompilation</a>
+            <a href="#" class="active">Phase 5: Language-Specific</a>
+        </div>
+        
+        <div class="reverse-theme">
+            <div class="theme-header">
+                <h2><i class="fas fa-language"></i> Understanding Language Behavior</h2>
+                <div class="phase-tag">PHASE 5: LANGUAGE-SPECIFIC RE</div>
+            </div>
+            
+            <div class="article-content">
+                <!-- Introduction -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-play-circle"></i> Welcome to the Language Playground</h3>
+                    <div class="section-content">
+                        <p>Now, welcome to the playground of languages! 🎢 You've already learned binaries, CPU, assembly, and decompilation. Phase 5 is where we focus on how each programming language behaves in the wild and how reverse engineers approach them differently.</p>
+                        
+                        <div class="highlight-box">
+                            <p><strong>We'll cover:</strong></p>
+                            <ul class="concept-list">
+                                <li class="concept-item">C</li>
+                                <li class="concept-item">C++</li>
+                                <li class="concept-item">Java</li>
+                                <li class="concept-item">.NET</li>
+                                <li class="concept-item">Python</li>
+                                <li class="concept-item">Android/Smali</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Language Overview Cards -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-code"></i> Language Overview</h3>
+                    <div class="section-content">
+                        <div class="language-grid">
+                            <div class="language-card">
+                                <div class="language-header">
+                                    <div class="language-icon">C</div>
+                                    <div class="language-name">C Language</div>
+                                </div>
+                                <div class="language-desc">Low-level, manual memory management</div>
+                                <p><strong>RE Approach:</strong> Assembly reading, stack analysis</p>
+                                <p><strong>Tools:</strong> Ghidra, IDA, objdump</p>
+                            </div>
+                            
+                            <div class="language-card">
+                                <div class="language-header">
+                                    <div class="language-icon">C++</div>
+                                    <div class="language-name">C++</div>
+                                </div>
+                                <div class="language-desc">Object-oriented, vtables, inheritance</div>
+                                <p><strong>RE Approach:</strong> Class reconstruction, vtable analysis</p>
+                                <p><strong>Tools:</strong> Ghidra, IDA with Hex-Rays</p>
+                            </div>
+                            
+                            <div class="language-card">
+                                <div class="language-header">
+                                    <div class="language-icon">J</div>
+                                    <div class="language-name">Java</div>
+                                </div>
+                                <div class="language-desc">Bytecode, platform-independent</div>
+                                <p><strong>RE Approach:</strong> Decompile bytecode, read structure</p>
+                                <p><strong>Tools:</strong> Jadx, CFR, JD-GUI</p>
+                            </div>
+                            
+                            <div class="language-card">
+                                <div class="language-header">
+                                    <div class="language-icon">#</div>
+                                    <div class="language-name">.NET</div>
+                                </div>
+                                <div class="language-desc">MSIL, managed code, metadata-rich</div>
+                                <p><strong>RE Approach:</strong> Decompile MSIL, analyze metadata</p>
+                                <p><strong>Tools:</strong> dnSpy, ILSpy, dotPeek</p>
+                            </div>
+                            
+                            <div class="language-card">
+                                <div class="language-header">
+                                    <div class="language-icon">🐍</div>
+                                    <div class="language-name">Python</div>
+                                </div>
+                                <div class="language-desc">Interpreted, .pyc bytecode</div>
+                                <p><strong>RE Approach:</strong> Decompile bytecode</p>
+                                <p><strong>Tools:</strong> uncompyle6, pycdc, decompyle3</p>
+                            </div>
+                            
+                            <div class="language-card">
+                                <div class="language-header">
+                                    <div class="language-icon"><i class="fab fa-android"></i></div>
+                                    <div class="language-name">Android</div>
+                                </div>
+                                <div class="language-desc">APK containers, DEX bytecode + native libs</div>
+                                <p><strong>RE Approach:</strong> Multi-language analysis</p>
+                                <p><strong>Tools:</strong> Jadx, Ghidra, apktool</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- C Language Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-dumbbell"></i> Reverse Engineering C Programs</h3>
+                    <div class="section-content">
+                        <p>C is low-level enough to feel like you're holding a scalpel.</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> Example C Program
+                                </div>
+                                <div class="code-lang">C</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-comment">#include &lt;stdio.h&gt;</span></div>
+                                <div class="code-line"></div>
+                                <div class="code-line"><span class="code-keyword">int</span> <span class="code-function">factorial</span>(<span class="code-keyword">int</span> n) {</div>
+                                <div class="code-line">    <span class="code-keyword">if</span>(n <= 1) <span class="code-keyword">return</span> 1;</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> n * factorial(n-1);</div>
+                                <div class="code-line">}</div>
+                                <div class="code-line"></div>
+                                <div class="code-line"><span class="code-keyword">int</span> <span class="code-function">main</span>() {</div>
+                                <div class="code-line">    <span class="code-keyword">int</span> x;</div>
+                                <div class="code-line">    printf(<span class="code-string">"Enter a number: "</span>);</div>
+                                <div class="code-line">    scanf(<span class="code-string">"%d"</span>, &x);</div>
+                                <div class="code-line">    printf(<span class="code-string">"Factorial: %d\n"</span>, factorial(x));</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> 0;</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Compile:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line">gcc -o factorial factorial.c</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Binary now contains:</strong></p>
+                        <ul class="concept-list">
+                            <li class="concept-item">.text – code</li>
+                            <li class="concept-item">.data – initialized variables</li>
+                            <li class="concept-item">.bss – uninitialized variables</li>
+                        </ul>
+                        
+                        <p><strong>Disassembling:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line">objdump -d factorial</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>You might see:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line">call factorial</div>
+                                <div class="code-line">mov eax, edi</div>
+                                <div class="code-line">imul eax, eax</div>
+                                <div class="code-line">ret</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>Reverse engineering C requires:</strong></p>
+                            <ul>
+                                <li>Following stack usage</li>
+                                <li>Recognizing function prologues/epilogues</li>
+                                <li>Understanding memory addresses</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- C++ Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-monument"></i> Reverse Engineering C++ – The Archaeology</h3>
+                    <div class="section-content">
+                        <p>C++ adds classes, inheritance, and vtables.</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> Example C++ Program
+                                </div>
+                                <div class="code-lang">C++</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-comment">#include &lt;iostream&gt;</span></div>
+                                <div class="code-line"><span class="code-keyword">class</span> <span class="code-class">User</span> {</div>
+                                <div class="code-line"><span class="code-keyword">public</span>:</div>
+                                <div class="code-line">    <span class="code-keyword">int</span> id;</div>
+                                <div class="code-line">    <span class="code-keyword">bool</span> isAdmin;</div>
+                                <div class="code-line">    <span class="code-keyword">void</span> <span class="code-function">printStatus</span>() {</div>
+                                <div class="code-line">        <span class="code-keyword">if</span>(isAdmin)</div>
+                                <div class="code-line">            std::cout << <span class="code-string">"Admin\n"</span>;</div>
+                                <div class="code-line">        <span class="code-keyword">else</span></div>
+                                <div class="code-line">            std::cout << <span class="code-string">"User\n"</span>;</div>
+                                <div class="code-line">    }</div>
+                                <div class="code-line">};</div>
+                                <div class="code-line"></div>
+                                <div class="code-line"><span class="code-keyword">int</span> <span class="code-function">main</span>() {</div>
+                                <div class="code-line">    User u{1, <span class="code-keyword">true</span>};</div>
+                                <div class="code-line">    u.printStatus();</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> 0;</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>After compilation:</strong></p>
+                            <ul>
+                                <li>Classes disappear</li>
+                                <li>Methods are linked via vtables</li>
+                                <li>Names are often mangled: <code>_ZN4User11printStatusEv</code></li>
+                            </ul>
+                        </div>
+                        
+                        <p><strong>Reverse Engineering Tips:</strong></p>
+                        <ul class="concept-list">
+                            <li class="concept-item">Identify vtables</li>
+                            <li class="concept-item">Track memory offsets</li>
+                            <li class="concept-item">Reconstruct class structure</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Even without names, memory layout shows:<br>
+                            • id at offset 0<br>
+                            • isAdmin at offset 4
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Java Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-comment-dots"></i> Reverse Engineering Java – The Talkative One</h3>
+                    <div class="section-content">
+                        <p>Java compiles to bytecode (.class) that retains structure:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> Example Java Code
+                                </div>
+                                <div class="code-lang">Java</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">public class</span> <span class="code-class">Login</span> {</div>
+                                <div class="code-line">    <span class="code-keyword">public</span> <span class="code-keyword">boolean</span> <span class="code-function">check</span>(String password) {</div>
+                                <div class="code-line">        <span class="code-keyword">return</span> password.equals(<span class="code-string">"secret"</span>);</div>
+                                <div class="code-line">    }</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Decompile with Jadx / CFR:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line">jadx-gui Login.class</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Recovered code:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">public</span> <span class="code-keyword">boolean</span> <span class="code-function">check</span>(String password) {</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> password.equals(<span class="code-string">"secret"</span>);</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>Java is friendlier because:</strong></p>
+                            <ul>
+                                <li>Control flow is visible</li>
+                                <li>Methods are named</li>
+                                <li>Strings are easy to find</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- .NET Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-glasses"></i> Reverse Engineering .NET – The "Peek Through Glass"</h3>
+                    <div class="section-content">
+                        <p>.NET binaries (C#, VB.NET) compile to MSIL (Intermediate Language).</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> Example C# Code
+                                </div>
+                                <div class="code-lang">C#</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">public class</span> <span class="code-class">Auth</span> {</div>
+                                <div class="code-line">    <span class="code-keyword">public</span> <span class="code-keyword">bool</span> <span class="code-function">Login</span>(<span class="code-keyword">string</span> pwd) {</div>
+                                <div class="code-line">        <span class="code-keyword">return</span> pwd == <span class="code-string">"1234"</span>;</div>
+                                <div class="code-line">    }</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Tools:</strong> dnSpy, ILSpy</p>
+                        
+                        <p><strong>Decompiled code is almost perfect:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">public</span> <span class="code-keyword">bool</span> <span class="code-function">Login</span>(<span class="code-keyword">string</span> pwd) {</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> pwd == <span class="code-string">"1234"</span>;</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            .NET is one of the easiest languages to reverse engineer because:<br>
+                            • Metadata is intact<br>
+                            • Names are preserved<br>
+                            • Control flow is readable
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Python Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-window-maximize"></i> Reverse Engineering Python – The Glass House</h3>
+                    <div class="section-content">
+                        <p>Python often ships as .pyc bytecode.</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fab fa-python"></i> Example Python Code
+                                </div>
+                                <div class="code-lang">Python</div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">def</span> <span class="code-function">check</span>(password):</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> password == <span class="code-string">"python123"</span></div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Decompile with:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line">uncompyle6 check.pyc</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Recovered code:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">def</span> <span class="code-function">check</span>(password):</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> password == <span class="code-string">"python123"</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Python is transparent, making it a perfect candidate for:<br>
+                            • Understanding logic<br>
+                            • Studying poor security assumptions
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Android Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fab fa-android"></i> Android Reverse Engineering – The Mobile Jungle</h3>
+                    <div class="section-content">
+                        <p>Android apps are containers (APKs):</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-folder"></i> APK Structure
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">app.apk</div>
+                                <div class="code-line">├─ classes.dex  # Java/Kotlin bytecode</div>
+                                <div class="code-line">├─ lib/         # Native libraries (.so)</div>
+                                <div class="code-line">├─ res/         # Resources</div>
+                                <div class="code-line">└─ AndroidManifest.xml</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Using Jadx:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line">jadx-gui app.apk</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Inspect:</strong></p>
+                        <ul class="concept-list">
+                            <li class="concept-item">Classes</li>
+                            <li class="concept-item">Follow methods</li>
+                            <li class="concept-item">Track string references</li>
+                        </ul>
+                        
+                        <p><strong>Native Code in APK:</strong></p>
+                        <p>Some apps include .so files (C++):</p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> Use Ghidra or IDA
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> Track JNI calls
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> Reconstruct function logic
+                            </div>
+                        </div>
+                        
+                        <p><strong>Example JNI C code:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line">JNIEXPORT jint JNICALL</div>
+                                <div class="code-line">Java_com_app_Main_add(JNIEnv* env,</div>
+                                <div class="code-line">                    jobject obj,</div>
+                                <div class="code-line">                    jint a,</div>
+                                <div class="code-line">                    jint b) {</div>
+                                <div class="code-line">    return a + b;</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #1 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-brain"></i> Mental Model #1: Language Dictates Approach</h3>
+                    <div class="section-content">
+                        <div class="highlight-box">
+                            <p><strong>Your approach depends on language:</strong></p>
+                            <ul>
+                                <li><strong>C/C++</strong> → low-level, manual memory, patterns</li>
+                                <li><strong>Java/.NET</strong> → bytecode, readable structures</li>
+                                <li><strong>Python</strong> → transparent, high-level logic</li>
+                                <li><strong>Android</strong> → hybrid, multi-language</li>
+                            </ul>
+                        </div>
+                        
+                        <p><strong>Cross-Language Patterns:</strong></p>
+                        <p>Regardless of language:</p>
+                        
+                        <ul class="concept-list">
+                            <li class="concept-item">Functions → identifiable via calls/offsets</li>
+                            <li class="concept-item">Strings → hints at logic</li>
+                            <li class="concept-item">Loops and conditions → control flow</li>
+                            <li class="concept-item">Memory → stack/heap/objects</li>
+                        </ul>
+                        
+                        <div class="quote-box">
+                            Reverse engineering is language-agnostic at the core.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Example Workflow -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-tasks"></i> Example Workflow: Multi-Language RE</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> Identify language: PE/ELF/JAR/APK
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> Choose appropriate tool:
+                                <div style="margin-left: 25px; margin-top: 10px;">
+                                    • C/C++ → Ghidra/IDA<br>
+                                    • Java → Jadx<br>
+                                    • .NET → dnSpy<br>
+                                    • Python → uncompyle6
+                                </div>
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> Explore sections/classes
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">4.</span> Follow strings and functions
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">5.</span> Map logic and reconstruct flow
+                            </div>
+                        </div>
+                        
+                        <p><strong>Hands-On Example: Simple Cross-Language Analysis</strong></p>
+                        
+                        <p><strong>C++ logic in native library for Android APK:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">int</span> <span class="code-function">multiply</span>(<span class="code-keyword">int</span> a, <span class="code-keyword">int</span> b) {</div>
+                                <div class="code-line">    <span class="code-keyword">return</span> a * b;</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <p>Decompiled from .so → see offsets and instructions</p>
+                        <p>Reconstruct function → verify input/output in JNI wrapper</p>
+                        
+                        <p><strong>Java Wrapper:</strong></p>
+                        <div class="code-container">
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">public class</span> <span class="code-class">Calc</span> {</div>
+                                <div class="code-line">    <span class="code-keyword">static</span> {</div>
+                                <div class="code-line">        System.loadLibrary(<span class="code-string">"nativeLib"</span>);</div>
+                                <div class="code-line">    }</div>
+                                <div class="code-line">    <span class="code-keyword">public native int</span> <span class="code-function">multiply</span>(<span class="code-keyword">int</span> a, <span class="code-keyword">int</span> b);</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            You now see multi-layered logic: C++ native function called from Java.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Model #2 -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-layer-group"></i> Mental Model #2: Think in Abstraction Layers</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <strong>High-level</strong><br>
+                                classes, functions, methods
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Medium-level</strong><br>
+                                bytecode, pseudocode, decompiled output
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Low-level</strong><br>
+                                assembly, registers, memory
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Reverse engineers switch layers fluidly.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tool Table -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-toolbox"></i> Language-Specific Tools</h3>
+                    <div class="section-content">
+                        <table class="tool-table">
+                            <tr>
+                                <th>Language</th>
+                                <th>Primary Tools</th>
+                                <th>Key Features</th>
+                            </tr>
+                            <tr>
+                                <td>C/C++</td>
+                                <td>Ghidra, IDA Pro, objdump</td>
+                                <td>Assembly analysis, decompilation</td>
+                            </tr>
+                            <tr>
+                                <td>Java</td>
+                                <td>Jadx, CFR, JD-GUI</td>
+                                <td>Bytecode decompilation, class analysis</td>
+                            </tr>
+                            <tr>
+                                <td>.NET</td>
+                                <td>dnSpy, ILSpy, dotPeek</td>
+                                <td>MSIL decompilation, metadata extraction</td>
+                            </tr>
+                            <tr>
+                                <td>Python</td>
+                                <td>uncompyle6, pycdc, decompyle3</td>
+                                <td>Bytecode to source reconstruction</td>
+                            </tr>
+                            <tr>
+                                <td>Android</td>
+                                <td>Jadx, Ghidra, apktool</td>
+                                <td>Multi-language analysis, APK unpacking</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Conclusion -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-check-circle"></i> What You Should Be Comfortable With After Phase 5</h3>
+                    <div class="section-content">
+                        <ul class="concept-list">
+                            <li class="concept-item">Reverse engineering C, C++, Java, .NET, Python, and Android apps</li>
+                            <li class="concept-item">Identifying functions, strings, loops, and variables</li>
+                            <li class="concept-item">Reconstructing logic across languages</li>
+                            <li class="concept-item">Mapping native-to-managed code connections</li>
+                        </ul>
+                        
+                        <div class="highlight-box" style="text-align: center; font-size: 1.1rem; padding: 20px;">
+                            Phase 5 equips you with language-specific intuition. You can now read almost any program with confidence.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="button-group">
+                    <button class="nav-btn" onclick="goToPhase(4)">
+                        <i class="fas fa-arrow-left"></i> Back to Phase 4
+                    </button>
+                    
+                    <button class="nav-btn next" onclick="goToPhase(6)">
+                        Continue to Phase 6 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation functions
+        function goToPhase(phaseNumber) {
+            const btn = event.target.closest('.nav-btn') || event.target;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = phaseNumber === 4 ? 
+                '<i class="fas fa-spinner fa-spin"></i> Loading...' : 
+                '<i class="fas fa-spinner fa-spin"></i> Loading Phase 6...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                if (phaseNumber === 4) {
+                    window.location.href = 'phase4.html';
+                } else {
+                    window.location.href = 'phase6.html';
+                    // alert('Phase 6 content will be loaded when provided.');
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 800);
+        }
+        
+        // Simple scroll effect
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateX(0)';
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            sections.forEach(section => {
+                section.style.opacity = '0.9';
+                section.style.transform = 'translateX(-10px)';
+                section.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>

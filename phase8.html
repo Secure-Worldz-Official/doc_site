@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Engineering - Phase 8: Android RE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Reset - Clean */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .page-title h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff00ff, #00eeff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .page-title p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Main Theme Container */
+        .reverse-theme {
+            background: rgba(26, 26, 46, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .theme-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 0, 255, 0.3);
+            flex-wrap: wrap;
+        }
+        
+        .theme-header h2 {
+            font-size: 1.8rem;
+            color: #ff00ff;
+        }
+        
+        .phase-tag {
+            background: rgba(255, 0, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #ff00ff;
+        }
+        
+        /* Navigation */
+        .phase-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-nav a {
+            color: #ff00ff;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-nav a.active {
+            background: rgba(255, 0, 255, 0.2);
+            border: 1px solid #ff00ff;
+        }
+        
+        .phase-nav a:hover:not(.active) {
+            background: rgba(255, 0, 255, 0.1);
+        }
+        
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #ff00ff;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-section:hover {
+            transform: translateX(5px);
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            color: #ff00ff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: rgba(255, 0, 255, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 0, 255, 0.2);
+        }
+        
+        /* Quote Box */
+        .quote-box {
+            background: rgba(0, 238, 255, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #00eeff;
+            font-style: italic;
+        }
+        
+        /* Lists */
+        .concept-list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .concept-item {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        /* Tool Cards */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .tool-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 238, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-5px);
+            border-color: #00eeff;
+        }
+        
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .tool-icon {
+            font-size: 2rem;
+            color: #00eeff;
+        }
+        
+        .tool-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #00eeff;
+        }
+        
+        /* Code Container */
+        .code-container {
+            background: #0a0a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 238, 255, 0.3);
+            margin: 20px 0;
+        }
+        
+        .code-header {
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(0, 238, 255, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-title {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #00eeff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .code-lang {
+            background: rgba(0, 238, 255, 0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .code-box {
+            padding: 20px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            margin-bottom: 4px;
+            display: block;
+            white-space: pre;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .line-number {
+            color: #666;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 15px;
+            user-select: none;
+        }
+        
+        .code-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-keyword {
+            color: #ff00ff;
+            font-weight: 600;
+        }
+        
+        .code-string {
+            color: #ffbd2e;
+        }
+        
+        .code-function {
+            color: #00eeff;
+        }
+        
+        .code-cmd {
+            color: #27ca3f;
+        }
+        
+        .code-register {
+            color: #9d50bb;
+        }
+        
+        .code-smali {
+            color: #ffbd2e;
+        }
+        
+        /* APK Structure */
+        .apk-structure {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border: 1px solid rgba(255, 189, 46, 0.2);
+        }
+        
+        .apk-item {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #ffbd2e;
+        }
+        
+        .apk-name {
+            color: #ffbd2e;
+            font-family: 'Monaco', 'Consolas', monospace;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        /* Workflow Steps */
+        .workflow {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border: 1px solid rgba(39, 202, 63, 0.2);
+        }
+        
+        .workflow-step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 3px solid #27ca3f;
+            background: rgba(39, 202, 63, 0.05);
+        }
+        
+        .step-number {
+            color: #27ca3f;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        /* Comparison Side-by-side */
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .comparison-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .comparison-title {
+            font-size: 1.2rem;
+            color: #ffbd2e;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 189, 46, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        /* Practice Ideas */
+        .practice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .practice-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(157, 80, 187, 0.2);
+        }
+        
+        .practice-title {
+            font-size: 1.1rem;
+            color: #9d50bb;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        /* Button Group */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 0, 255, 0.2);
+            color: white;
+            border: 1px solid #ff00ff;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 0, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn.next {
+            background: linear-gradient(90deg, #ff00ff, #00eeff);
+            border: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .page-title h1 {
+                font-size: 2.2rem;
+            }
+            
+            .reverse-theme {
+                padding: 20px;
+            }
+            
+            .theme-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .theme-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 1.2rem;
+            }
+            
+            .tool-grid, .practice-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .reverse-theme {
+                padding: 15px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .code-box {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .tool-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-title">
+            <h1>Reverse Engineering</h1>
+            <p>Phase 8: Android Reverse Engineering – Exploring the Mobile Jungle 📱</p>
+        </div>
+        
+        <div class="phase-nav">
+            <a href="#">Phase 1: Foundation</a>
+            <a href="#">Phase 6: Dynamic Analysis</a>
+            <a href="#">Phase 7: Coming Soon</a>
+            <a href="#" class="active">Phase 8: Android RE</a>
+        </div>
+        
+        <div class="reverse-theme">
+            <div class="theme-header">
+                <h2><i class="fab fa-android"></i> The Mobile Jungle Exploration</h2>
+                <div class="phase-tag">PHASE 8: ANDROID REVERSE ENGINEERING</div>
+            </div>
+            
+            <div class="article-content">
+                <!-- Introduction -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-leaf"></i> Welcome to the Android Jungle</h3>
+                    <div class="section-content">
+                        <p>Alright, take a breath 😄 We are stepping into a jungle now — not a dangerous one, but a very interesting one.</p>
+                        
+                        <div class="highlight-box">
+                            <p><strong>Android reverse engineering feels exciting because:</strong></p>
+                            <ul class="concept-list">
+                                <li class="concept-item">Apps are everywhere</li>
+                                <li class="concept-item">Logic is visible</li>
+                                <li class="concept-item">Mistakes are common</li>
+                                <li class="concept-item">Learning is fast</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="quote-box">
+                            If desktop binaries are mountains, Android apps are cities — full of rooms, doors, shortcuts, and sometimes unlocked windows.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What an Android App Really Is -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-box-open"></i> What an Android App Really Is</h3>
+                    <div class="section-content">
+                        <p>An Android app is not magic. An APK is just a ZIP file.</p>
+                        
+                        <div class="apk-structure">
+                            <div class="apk-item">
+                                <div class="apk-name">classes.dex</div>
+                                <div>Java/Kotlin bytecode</div>
+                            </div>
+                            <div class="apk-item">
+                                <div class="apk-name">AndroidManifest.xml</div>
+                                <div>App blueprint and permissions</div>
+                            </div>
+                            <div class="apk-item">
+                                <div class="apk-name">lib/</div>
+                                <div>Native C/C++ libraries (.so files)</div>
+                            </div>
+                            <div class="apk-item">
+                                <div class="apk-name">res/</div>
+                                <div>UI resources and layouts</div>
+                            </div>
+                            <div class="apk-item">
+                                <div class="apk-name">assets/</div>
+                                <div>Raw files bundled with app</div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Once you realize this, fear disappears.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- The Android Reverse Engineering Mindset -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-brain"></i> The Android Reverse Engineering Mindset</h3>
+                    <div class="section-content">
+                        <p>Before tools, remember this:</p>
+                        
+                        <div class="highlight-box">
+                            <p><strong>Android reverse engineering is about:</strong></p>
+                            <ul>
+                                <li>Understanding app logic</li>
+                                <li>Tracing user actions</li>
+                                <li>Mapping conditions and decisions</li>
+                            </ul>
+                            <p><strong>Not about clicking random buttons in tools.</strong></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AndroidManifest.xml -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-id-card"></i> AndroidManifest.xml – The App's Identity Card</h3>
+                    <div class="section-content">
+                        <p>This file tells you everything about the app:</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-file-code"></i> AndroidManifest.xml Example
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">&lt;uses-permission android:name=<span class="code-string">"android.permission.INTERNET"</span>/&gt;</div>
+                                <div class="code-line">&lt;activity android:name=<span class="code-string">".LoginActivity"</span>/&gt;</div>
+                                <div class="code-line">&lt;service android:name=<span class="code-string">".BackgroundService"</span>/&gt;</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>From this alone, you learn:</strong></p>
+                            <ul>
+                                <li>App talks to the internet</li>
+                                <li>There is a login screen</li>
+                                <li>Background service runs</li>
+                            </ul>
+                            <p>Information leaks early 😄</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tools Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-toolbox"></i> Essential Android RE Tools</h3>
+                    <div class="section-content">
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-code"></i></div>
+                                    <div class="tool-name">JADX</div>
+                                </div>
+                                <p>Java/Kotlin decompiler, shows readable code</p>
+                                <div class="code-container" style="margin: 10px 0 0 0;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line">jadx app.apk</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-cogs"></i></div>
+                                    <div class="tool-name">apktool</div>
+                                </div>
+                                <p>Smali-level decompilation and repacking</p>
+                                <div class="code-container" style="margin: 10px 0 0 0;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line">apktool d app.apk</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fab fa-js"></i></div>
+                                    <div class="tool-name">Frida</div>
+                                </div>
+                                <p>Runtime hooking and method interception</p>
+                                <div class="code-container" style="margin: 10px 0 0 0;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line">frida -U -f com.app</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-terminal"></i></div>
+                                    <div class="tool-name">adb</div>
+                                </div>
+                                <p>Android Debug Bridge for device communication</p>
+                                <div class="code-container" style="margin: 10px 0 0 0;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line">adb logcat</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reading Decompiled Java -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-book-reader"></i> Reading Decompiled Java the Right Way</h3>
+                    <div class="section-content">
+                        <p><strong>Example from jadx:</strong></p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fab fa-java"></i> Decompiled Java Code
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-keyword">if</span> (!this.isPremium) {</div>
+                                <div class="code-line">    showAds();</div>
+                                <div class="code-line">}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">Q:</span> Where is isPremium set?
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">Q:</span> Is it server-controlled or local?
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">Q:</span> Can this be modified?
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Reverse engineering starts with questions, not answers.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Smali Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-microchip"></i> Smali – Android's Assembly Language</h3>
+                    <div class="section-content">
+                        <p>Smali is to Android what assembly is to native binaries.</p>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Smali Code</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">if-eqz v0, :cond_0</div>
+                                        <div class="code-line">invoke-virtual {p0}, Lcom/app/Main;->unlock()V</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Translation</div>
+                                <div class="highlight-box">
+                                    <p><strong>If v0 == 0, jump</strong></p>
+                                    <p><strong>Otherwise, unlock feature</strong></p>
+                                    <p>Readable. Logical. Patchable.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Smali Patching Example -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-wrench"></i> Smali Patching Example</h3>
+                    <div class="section-content">
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Original Logic</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">if-eqz v0, :fail</div>
+                                        <div class="code-line"><span class="code-comment">; If v0 == 0, jump to fail</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Patched Version</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">const/4 v0, 0x1</div>
+                                        <div class="code-line"><span class="code-comment">; Set v0 = 1 (always true)</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>This teaches:</strong></p>
+                            <ul>
+                                <li>Control flow manipulation</li>
+                                <li>Boolean logic understanding</li>
+                                <li>App trust assumptions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- APK Rebuilding Workflow -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-sync-alt"></i> Rebuilding and Signing APK</h3>
+                    <div class="section-content">
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">1.</span> Decompile with apktool
+                                <div class="code-container" style="margin: 10px 0 0 20px;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line"><span class="code-cmd">apktool d</span> app.apk</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="workflow-step">
+                                <span class="step-number">2.</span> Modify Smali code
+                                <div style="margin-left: 20px; margin-top: 10px;">
+                                    <p>Edit the .smali files in the decompiled directory</p>
+                                </div>
+                            </div>
+                            
+                            <div class="workflow-step">
+                                <span class="step-number">3.</span> Rebuild APK
+                                <div class="code-container" style="margin: 10px 0 0 20px;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line"><span class="code-cmd">apktool b</span> app</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="workflow-step">
+                                <span class="step-number">4.</span> Sign APK
+                                <div class="code-container" style="margin: 10px 0 0 20px;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line"><span class="code-cmd">jarsigner</span> -keystore debug.keystore app.apk androiddebugkey</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="workflow-step">
+                                <span class="step-number">5.</span> Install
+                                <div class="code-container" style="margin: 10px 0 0 20px;">
+                                    <div class="code-box" style="padding: 10px; font-size: 0.9rem;">
+                                        <div class="code-line"><span class="code-cmd">adb install</span> app.apk</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Runtime Android Analysis -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-play-circle"></i> Runtime Android Analysis</h3>
+                    <div class="section-content">
+                        <p>Static analysis shows structure. Runtime analysis shows behavior.</p>
+                        
+                        <p><strong>Using logcat:</strong></p>
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fas fa-terminal"></i> Reading Android Logs
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line"><span class="code-cmd">adb</span> logcat</div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            <p><strong>Apps love to talk:</strong></p>
+                            <ul>
+                                <li>Debug messages</li>
+                                <li>API responses</li>
+                                <li>Errors and exceptions</li>
+                                <li>Keys (yes, sometimes 😄)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Frida Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-bolt"></i> Frida – The Superpower Tool</h3>
+                    <div class="section-content">
+                        <p>Frida lets you hook methods at runtime without modifying the APK.</p>
+                        
+                        <div class="code-container">
+                            <div class="code-header">
+                                <div class="code-title">
+                                    <i class="fab fa-js"></i> Frida JavaScript Hook
+                                </div>
+                            </div>
+                            
+                            <div class="code-box">
+                                <div class="code-line">Java.perform(function() {</div>
+                                <div class="code-line">    var Login = Java.use(<span class="code-string">"com.app.Login"</span>);</div>
+                                <div class="code-line">    Login.check.implementation = function(p) {</div>
+                                <div class="code-line">        console.log(<span class="code-string">"Password called: "</span> + p);</div>
+                                <div class="code-line">        <span class="code-keyword">return</span> <span class="code-keyword">true</span>;  <span class="code-comment">// bypass check</span></div>
+                                <div class="code-line">    };</div>
+                                <div class="code-line">});</div>
+                            </div>
+                        </div>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <span class="step-number">✓</span> Observed runtime values
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">✓</span> Modified behavior
+                            </div>
+                            <div class="workflow-step">
+                                <span class="step-number">✓</span> Learned logic
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            No patching yet. Pure observation and control.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Native Libraries Section -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-archway"></i> Native Libraries in Android (.so Files)</h3>
+                    <div class="section-content">
+                        <p>Some apps hide logic in native code.</p>
+                        
+                        <div class="apk-structure">
+                            <div class="apk-item">
+                                <div class="apk-name">lib/armeabi-v7a/</div>
+                                <div>.so files written in C/C++</div>
+                            </div>
+                            <div class="apk-item">
+                                <div class="apk-name">lib/arm64-v8a/</div>
+                                <div>64-bit native libraries</div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>These are reversed just like Linux binaries:</strong></p>
+                        
+                        <div class="tool-grid">
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-ghost"></i></div>
+                                    <div class="tool-name">Ghidra</div>
+                                </div>
+                                <p>Decompile and analyze native code</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-search"></i></div>
+                                    <div class="tool-name">IDA Pro</div>
+                                </div>
+                                <p>Interactive disassembler for .so files</p>
+                            </div>
+                            
+                            <div class="tool-card">
+                                <div class="tool-header">
+                                    <div class="tool-icon"><i class="fas fa-terminal"></i></div>
+                                    <div class="tool-name">gdb</div>
+                                </div>
+                                <p>Debug native code execution</p>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            JNI bridges Java ↔ native logic.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- JNI Reverse Engineering -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-bridge"></i> JNI Reverse Engineering</h3>
+                    <div class="section-content">
+                        <p>Java calls native code via JNI (Java Native Interface).</p>
+                        
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Java Side</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line"><span class="code-keyword">public native boolean</span> <span class="code-function">checkLicense</span>();</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Native Side (C/C++)</div>
+                                <div class="code-container">
+                                    <div class="code-box">
+                                        <div class="code-line">JNIEXPORT jboolean JNICALL</div>
+                                        <div class="code-line">Java_com_app_Main_checkLicense(JNIEnv *env, jobject obj) {</div>
+                                        <div class="code-line">    <span class="code-keyword">return</span> JNI_TRUE;</div>
+                                        <div class="code-line">}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            Once you find this, everything makes sense.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Understanding App Logic Flow -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-project-diagram"></i> Understanding App Logic Flow</h3>
+                    <div class="section-content">
+                        <p>Reverse engineers trace:</p>
+                        
+                        <div class="workflow">
+                            <div class="workflow-step">
+                                <strong>UI</strong> → Activity
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Activity</strong> → Method
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Method</strong> → Condition
+                            </div>
+                            <div class="workflow-step">
+                                <strong>Condition</strong> → Result
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-box">
+                            Apps are just decision trees.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Common Android Logic Mistakes -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> Common Android Logic Mistakes</h3>
+                    <div class="section-content">
+                        <div class="practice-grid">
+                            <div class="practice-card">
+                                <div class="practice-title">Client-side Checks</div>
+                                <p>Validation done locally, easily bypassed</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Hardcoded Secrets</div>
+                                <p>API keys, passwords stored in code</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Local License Validation</div>
+                                <p>Premium checks without server verification</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Debug Flags Enabled</div>
+                                <p>Development features left in production</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-box">
+                            These are learning opportunities, not targets.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mental Models -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-lightbulb"></i> Key Mental Models</h3>
+                    <div class="section-content">
+                        <div class="comparison">
+                            <div class="comparison-item">
+                                <div class="comparison-title">Model #1: Apps Trust Too Much</div>
+                                <div class="highlight-box">
+                                    <p>Many apps assume:</p>
+                                    <ul>
+                                        <li>Users won't look inside</li>
+                                        <li>Logic won't be modified</li>
+                                        <li>Checks are safe locally</li>
+                                    </ul>
+                                    <p>Reverse engineering teaches why this assumption fails.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-item">
+                                <div class="comparison-title">Model #2: UI Is Not Logic</div>
+                                <div class="highlight-box">
+                                    <p>Buttons and screens mean nothing. Logic lives in:</p>
+                                    <ul>
+                                        <li>Methods</li>
+                                        <li>Conditions</li>
+                                        <li>Native calls</li>
+                                    </ul>
+                                    <p>Always follow code paths, not UI paths.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Practice Ideas -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-hands-helping"></i> Practice Ideas</h3>
+                    <div class="section-content">
+                        <div class="practice-grid">
+                            <div class="practice-card">
+                                <div class="practice-title">Analyze a Login Screen</div>
+                                <p>Trace authentication flow</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Trace Premium Feature</div>
+                                <p>Find where "pro" check happens</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Observe API Calls</div>
+                                <p>Monitor network requests</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Hook with Frida</div>
+                                <p>Intercept method calls</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Patch Smali</div>
+                                <p>Modify a condition</p>
+                            </div>
+                            
+                            <div class="practice-card">
+                                <div class="practice-title">Use:</div>
+                                <p>• Your own test apps<br>• Open-source apps<br>• Learning challenges</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What You Should Be Comfortable With -->
+                <div class="content-section">
+                    <h3 class="section-title"><i class="fas fa-check-circle"></i> What You Should Be Comfortable With After Phase 8</h3>
+                    <div class="section-content">
+                        <ul class="concept-list">
+                            <li class="concept-item">APK structure understanding</li>
+                            <li class="concept-item">Java/Kotlin decompilation</li>
+                            <li class="concept-item">Smali reading and patching</li>
+                            <li class="concept-item">Runtime hooking with Frida</li>
+                            <li class="concept-item">JNI and native code awareness</li>
+                        </ul>
+                        
+                        <div class="highlight-box" style="text-align: center; font-size: 1.1rem; padding: 20px;">
+                            Android reverse engineering teaches speed, clarity, and logic tracing — skills that transfer to all platforms.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="button-group">
+                    <button class="nav-btn" onclick="goToPhase(7)">
+                        <i class="fas fa-arrow-left"></i> Back to Phase 7
+                    </button>
+                    
+                    <button class="nav-btn next" onclick="goToPhase(9)">
+                        Continue to Phase 9 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation functions
+        function goToPhase(phaseNumber) {
+            const btn = event.target.closest('.nav-btn') || event.target;
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = phaseNumber === 7 ? 
+                '<i class="fas fa-spinner fa-spin"></i> Loading...' : 
+                '<i class="fas fa-spinner fa-spin"></i> Loading Phase 9...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                if (phaseNumber === 7) {
+                    window.location.href = 'phase7.html';
+                } else {
+                    window.location.href = 'phase9.html';
+                    // alert('Phase 9 content will be loaded when provided.');
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 800);
+        }
+        
+        // Simple scroll effect
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateX(0)';
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            sections.forEach(section => {
+                section.style.opacity = '0.9';
+                section.style.transform = 'translateX(-10px)';
+                section.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>
